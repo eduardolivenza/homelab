@@ -1,0 +1,21 @@
+# Túnel de Cloudflare como infraestructura compartida (antes vivía en fest-page).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudflared
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/eduardolivenza/homelab
+    targetRevision: HEAD
+    path: platform/cloudflared
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudflared
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

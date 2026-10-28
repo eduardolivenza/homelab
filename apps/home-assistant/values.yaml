@@ -1,0 +1,43 @@
+# Copiado tal cual de la Application que hoy corre en el cluster.
+replicaCount: 1
+image:
+  repository: ghcr.io/home-assistant/home-assistant
+  # TODO: fijar la versión que corre hoy (Ajustes > Acerca de en HA) en vez de "stable",
+  # para que un reinicio no te actualice HA sin avisar. No bajar de versión.
+  tag: stable
+env:
+  - name: TZ
+    value: "Europe/Madrid"
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClass: local-path
+service:
+  type: ClusterIP
+  port: 8123
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: homeassistant.local
+      paths:
+        - path: /
+          pathType: Prefix
+hostNetwork: true
+dnsPolicy: ClusterFirstWithHostNet
+securityContext:
+  capabilities:
+    add:
+      - NET_ADMIN
+      - NET_RAW
+additionalVolumes:
+  - name: recordings
+    hostPath:
+      path: /home/edu/ha-recordings
+      type: Directory
+additionalMounts:
+  - name: recordings
+    mountPath: /config/recordings
+configuration:
+  enabled: true
+  forceInit: true

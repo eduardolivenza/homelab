@@ -1,0 +1,28 @@
+# Home Assistant: chart de pajikos + values versionados en este repo.
+# Mismo nombre que la Application creada a mano -> ArgoCD la adopta sin redeploy.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-assistant
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: http://pajikos.github.io/home-assistant-helm-chart/
+      chart: home-assistant
+      targetRevision: 0.3.67
+      helm:
+        valueFiles:
+          - $values/apps/home-assistant/values.yaml
+    - repoURL: https://github.com/eduardolivenza/homelab
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: home-assistant
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,5 @@
+# Nunca subir secretos sin cifrar
+*.json
+*-secret.yaml
+*.unsealed.yaml
+.env

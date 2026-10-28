@@ -1,0 +1,61 @@
+# Web de fest-descans. El código y los charts siguen en el repo fest-page;
+# aquí solo se declara QUÉ se despliega.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: fest-descans
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - app: web
+          - app: admin
+          - app: api
+  template:
+    metadata:
+      name: "fest-descans-{{app}}"
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/eduardolivenza/fest-page
+        targetRevision: HEAD
+        path: "helm/{{app}}"
+        helm:
+          parameters:
+            - name: global.imagePullSecrets[0].name
+              value: ghcr-credentials
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: fest-descans
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+---
+# Secretos cifrados (SealedSecrets) del namespace fest-descans.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fest-descans-secrets
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/eduardolivenza/homelab
+    targetRevision: HEAD
+    path: apps/fest-descans/secrets
+    directory:
+      exclude: "*.md"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fest-descans
+  syncPolicy:
+    automated:
+      prune: false     # no borrar secretos por accidente
+      selfHeal: true

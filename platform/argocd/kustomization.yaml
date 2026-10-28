@@ -1,0 +1,6 @@
+# ArgoCD gestionándose a sí mismo. Versión fijada = la que corre hoy en el cluster.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.4.4/manifests/install.yaml
