@@ -41,3 +41,27 @@ additionalMounts:
 configuration:
   enabled: true
   forceInit: true
+startupProbe:
+  httpGet:
+    path: /
+    port: http
+    scheme: HTTP
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+    scheme: HTTP
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+    scheme: HTTP
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
