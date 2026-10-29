@@ -3,3 +3,4 @@
 *-secret.yaml
 *.unsealed.yaml
 .env
+!renovate.json

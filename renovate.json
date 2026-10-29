@@ -1,0 +1,45 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Madrid",
+  "schedule": ["before 10am on saturday"],
+  "dependencyDashboard": true,
+  "prConcurrentLimit": 5,
+  "argocd": { "managerFilePatterns": ["/^argocd-apps/.+\\.ya?ml$/"] },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "ArgoCD self-managed install",
+      "managerFilePatterns": ["/^platform/argocd/kustomization\\.yaml$/"],
+      "matchStrings": ["argoproj/argo-cd/(?<currentValue>v[0-9.]+)/manifests"],
+      "depNameTemplate": "argoproj/argo-cd",
+      "datasourceTemplate": "github-releases"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Home Assistant: one PR per monthly release, never automerge",
+      "matchPackageNames": ["ghcr.io/home-assistant/home-assistant"],
+      "separateMultipleMinor": true,
+      "automerge": false,
+      "labels": ["home-assistant"],
+      "prBodyNotes": ["Before merging: read the breaking changes at https://www.home-assistant.io/blog/ and make a backup in HA (Settings → System → Backups). HA cannot be downgraded."]
+    },
+    {
+      "description": "Infrastructure",
+      "matchPackageNames": ["argoproj/argo-cd", "sealed-secrets", "cloudflare/cloudflared"],
+      "labels": ["platform"]
+    },
+    {
+      "description": "Home Assistant chart",
+      "matchPackageNames": ["home-assistant"],
+      "matchDatasources": ["helm"],
+      "labels": ["home-assistant"]
+    },
+    {
+      "description": "ArgoCD apps that track a Git branch (HEAD) have nothing to update",
+      "matchDatasources": ["git-tags"],
+      "enabled": false
+    }
+  ]
+}
