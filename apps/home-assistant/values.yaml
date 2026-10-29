@@ -4,7 +4,7 @@ image:
   repository: ghcr.io/home-assistant/home-assistant
   # TODO: fijar la versión que corre hoy (Ajustes > Acerca de en HA) en vez de "stable",
   # para que un reinicio no te actualice HA sin avisar. No bajar de versión.
-  tag: 2026.6.4
+  tag: 2026.7.4
 env:
   - name: TZ
     value: "Europe/Madrid"
