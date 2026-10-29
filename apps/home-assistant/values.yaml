@@ -55,8 +55,8 @@ livenessProbe:
     port: http
     scheme: HTTP
   periodSeconds: 30
-  timeoutSeconds: 10
-  failureThreshold: 3
+  timeoutSeconds: 15
+  failureThreshold: 10
 readinessProbe:
   httpGet:
     path: /
