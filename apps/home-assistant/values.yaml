@@ -16,13 +16,7 @@ service:
   type: ClusterIP
   port: 8123
 ingress:
-  enabled: true
-  className: traefik
-  hosts:
-    - host: homeassistant.local
-      paths:
-        - path: /
-          pathType: Prefix
+  enabled: false
 hostNetwork: true
 dnsPolicy: ClusterFirstWithHostNet
 securityContext:

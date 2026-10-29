@@ -1,0 +1,5 @@
+# Configuración de K3s -> /etc/rancher/k3s/config.yaml en el servidor.
+# Traefik desactivado: cloudflared habla directamente con los Services
+# y Home Assistant usa hostNetwork (http://192.168.68.53:8123 en casa).
+disable:
+  - traefik

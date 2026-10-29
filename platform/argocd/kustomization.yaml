@@ -4,3 +4,33 @@ kind: Kustomization
 namespace: argocd
 resources:
   - https://raw.githubusercontent.com/argoproj/argo-cd/v3.4.4/manifests/install.yaml
+
+# Servidor con poca RAM: quitamos lo que no se usa.
+# - Dex: solo para SSO. Con el usuario admin no se usa.
+# - Notifications: solo para avisos a Slack/email.
+# La app "argocd" tiene prune=false: tras quitarlos hay que borrarlos una vez a mano.
+patches:
+  - patch: |-
+      $patch: delete
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-dex-server
+  - patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: argocd-dex-server
+  - patch: |-
+      $patch: delete
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-notifications-controller
+  - patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: argocd-notifications-controller-metrics
