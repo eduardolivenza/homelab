@@ -45,3 +45,4 @@
 - Server time zone changed from `Etc/UTC` to `Europe/Madrid` (`timedatectl`); NTP was already synced. Containers and Kubernetes still log in UTC (PostgreSQL logs say `GMT`).
 - Moved fest-descans SealedSecrets to fest-page (decision D15) with zero downtime: removed the `fest-descans-secrets` Application (no finalizer → secrets stayed), then the `fest-descans-api` app adopted both SealedSecrets; Secrets kept their original age.
 - Repo layout: `platform/` and `apps/` merged into `components/` (decision D16); Applications labelled `homelab/tier`. Paths changed only, no resources redeployed.
+- Parent app `fest-descans` now groups `fest-descans-{web,admin,api}` (decision D17); ApplicationSet hardened with `preserveResourcesOnDeletion`.

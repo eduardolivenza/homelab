@@ -10,16 +10,18 @@ description: How to change anything on the homelab cluster through this repo —
 ```
 CLAUDE.md                     entry point for Claude
 bootstrap/root-app.yaml       the only manifest applied by hand (app-of-apps root)
-argocd-apps/                  one Application (or ApplicationSet) per component; synced by "root"
+argocd-apps/                  one Application per component; synced by "root"
   argocd.yaml                 → components/argocd          (prune: false)
   sealed-secrets.yaml         → Helm chart sealed-secrets (kube-system)
   cloudflared.yaml            → components/cloudflared     (ns cloudflared)
-  fest-descans.yaml           → ApplicationSet web/admin/api from fest-page repo helm/<app> (secrets included there)
+  fest-descans.yaml           → parent app (prune: false) → components/fest-descans/applicationset.yaml
+                                → fest-descans-web/-admin/-api from fest-page helm/<app> (secrets included there)
   home-assistant.yaml         → pajikos chart + values from components/home-assistant/values.yaml ($values multi-source)
 components/                   one folder per component, whatever it needs (rule: argocd-apps/<x>.yaml deploys components/<x>/)
   argocd/                     kustomization: upstream install.yaml (pinned) + patches
   cloudflared/                local Helm chart; values.yaml has the tunnel routes; templates/sealed-credentials.yaml
   home-assistant/values.yaml  values for the external pajikos chart
+  fest-descans/               ApplicationSet (preserveResourcesOnDeletion: true) generating the 3 website apps
 host/k3s/config.yaml          copy of /etc/rancher/k3s/config.yaml (applied by hand)
 renovate.json                 Renovate config (whitelisted in .gitignore)
 .gitignore                    ignores *.json, *-secret.yaml, *.unsealed.yaml, .env — never commit plaintext secrets
@@ -65,6 +67,15 @@ kubectl get pods -A | grep -vE 'Running|Completed'
 5. **Adopting existing resources**: an Application in Git with the same name as an existing one is adopted in place (how `home-assistant` and `fest-descans` were migrated).
 6. **Order of dependencies**: anything that needs a secret must not be synced before its SealedSecret exists (see `homelab-secrets`).
 7. **kubectl timeouts** right after `systemctl restart k3s` or under heavy I/O are normal for 1–2 min on this box; retry.
+
+## Grouping several apps under one parent
+
+Pattern used by fest-descans: `argocd-apps/<group>.yaml` is an Application (prune: false) whose path
+`components/<group>/` contains an ApplicationSet (or plain Application manifests). The children appear
+under the parent in the ArgoCD UI but sync, fail and roll back independently.
+Safety rules: ApplicationSet `syncPolicy.preserveResourcesOnDeletion: true` (generated apps have the
+`resources-finalizer`, so deleting the ApplicationSet would otherwise delete every workload) and
+`prune: false` on the parent.
 
 ## Adding a new app (template)
 

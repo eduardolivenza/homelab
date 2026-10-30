@@ -70,7 +70,7 @@ fest-page charts are inert leftovers.
 | `argocd` | ArgoCD v3.5.x (server, repo-server, application-controller, applicationset-controller, redis). Dex and notifications removed. | `argocd-apps/argocd.yaml` → `components/argocd` (kustomize over upstream install.yaml) |
 | `kube-system` | K3s core (coredns, local-path-provisioner, metrics-server) + sealed-secrets-controller | K3s / `argocd-apps/sealed-secrets.yaml` |
 | `cloudflared` | Tunnel connector | `components/cloudflared` (local Helm chart) |
-| `fest-descans` | web, admin, api (+ migrate initContainer), PostgreSQL (Bitnami subchart of the api chart) | `argocd-apps/fest-descans.yaml` (ApplicationSet → fest-page `helm/{web,admin,api}`); its SealedSecrets are in fest-page `helm/api/templates/` |
+| `fest-descans` | web, admin, api (+ migrate initContainer), PostgreSQL (Bitnami subchart of the api chart) | parent app `fest-descans` (`argocd-apps/fest-descans.yaml`) → ApplicationSet `components/fest-descans/` → apps `fest-descans-{web,admin,api}` from fest-page `helm/<app>`; its SealedSecrets are in fest-page `helm/api/templates/` |
 | `home-assistant` | Home Assistant StatefulSet (pajikos chart), hostNetwork, PVC 5Gi + hostPath `/home/edu/ha-recordings` | `argocd-components/home-assistant.yaml` + `components/home-assistant/values.yaml` |
 
 Home Assistant integrations in use (for upgrade risk): HACS, localtuya, tuya_local (xZetsubou fork,

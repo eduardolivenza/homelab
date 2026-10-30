@@ -75,5 +75,11 @@ Each entry: decision → why → tradeoff / what we gave up → revisit when.
 - **Why:** after D15 `apps/` held only HA; folder names didn't match content (full chart vs only values); with ~5 components the extra level added no information.
 - **Tradeoff:** with many components, a split by tier (or by sync wave) could be useful again; revisit then. Option rejected: putting each Application inside its component folder (needs a recursive, filtered root app).
 
+## D17. Parent app `fest-descans` grouping the website apps
+- **Decision (2026-10-30):** the ApplicationSet moved to `components/fest-descans/applicationset.yaml`; `argocd-apps/fest-descans.yaml` is now a parent Application that deploys it. The 3 generated apps keep their names and stay independent.
+- **Why:** in ArgoCD the 3 apps looked unrelated. Alternatives rejected: one Application with 3 sources or an umbrella chart (lose per-component sync/health/rollback and require recreating apps).
+- **Safety added:** `preserveResourcesOnDeletion: true` on the ApplicationSet and `prune: false` on the parent — before, deleting the ApplicationSet would have cascaded to every website workload.
+- Migration was an adoption: `root` (prune: false) left the existing ApplicationSet in place and the new parent took ownership; nothing was redeployed.
+
 ## D14. Host config versioned but applied by hand
 - `host/k3s/config.yaml` mirrors `/etc/rancher/k3s/config.yaml` (currently only `disable: [traefik]`). Copy + `sudo systemctl restart k3s` to apply. Ansible planned.

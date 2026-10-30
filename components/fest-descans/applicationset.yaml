@@ -1,0 +1,45 @@
+# Generates one Application per fest-descans component (web, admin, api), each
+# deploying fest-page helm/<app>. Code, charts, values and SealedSecrets live in the
+# fest-page repo; this repo only declares WHAT is deployed.
+# Managed by the parent Application argocd-apps/fest-descans.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: fest-descans
+  namespace: argocd
+  labels:
+    homelab/tier: app
+spec:
+  # Safety: if this ApplicationSet is ever deleted, keep the running resources
+  # (web, admin, api, PostgreSQL) instead of cascading the deletion.
+  syncPolicy:
+    preserveResourcesOnDeletion: true
+  generators:
+    - list:
+        elements:
+          - app: web
+          - app: admin
+          - app: api
+  template:
+    metadata:
+      name: "fest-descans-{{app}}"
+      labels:
+        homelab/tier: app
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/eduardolivenza/fest-page
+        targetRevision: HEAD
+        path: "helm/{{app}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: fest-descans
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
