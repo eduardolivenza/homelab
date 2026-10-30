@@ -1,0 +1,100 @@
+---
+name: fest-descans-postgres
+description: The fest-descans PostgreSQL database — where it is configured, the io_method=sync workaround and why, backup/restore with pg_dump, admin users, password changes and the plan to migrate off the Bitnami image. Use for any DB task on the fest-descans website.
+---
+
+# fest-descans PostgreSQL
+
+## Where it is defined
+
+Not in this repo: it is the Bitnami `postgresql` **subchart (13.4.4, vendored tgz)** of the api chart in
+`github.com/eduardolivenza/fest-page`, file `helm/api/values.yaml` → `postgresql:`. Deployed by the
+`fest-descans-api` Application (ApplicationSet in `argocd-apps/fest-descans.yaml`).
+
+| Item | Value |
+|---|---|
+| StatefulSet / pod | `fest-descans-api-postgresql` / `-0`, ns `fest-descans` |
+| Service | `fest-descans-api-postgresql:5432` (api `DATABASE_URL` points here) |
+| PVC | `data-fest-descans-api-postgresql-0`, 5Gi, local-path (host dir under `/var/lib/rancher/k3s/storage/`) |
+| Image | `docker.io/bitnami/postgresql@sha256:f67b10b185d344b15e9999b57bdbedb13b9a4c33aa3a939467ee519cec49d40e` = **PostgreSQL 18.4** (tag `latest` + pinned `digest`) |
+| Data dir | `/bitnami/postgresql/data`, runs as UID 1001 |
+| Database / app user | `fest-descans` / `fest-descans` |
+| Passwords | Secret `fest-descans-api`: `password` (app user), `postgres-password` (superuser `postgres`) — sealed in `apps/fest-descans/secrets/` |
+| Schema | Prisma, migrations in fest-page `packages/db/prisma/migrations`, applied by the api's `migrate` initContainer (`prisma migrate deploy`, retries every 5 s forever) |
+| Local dev | fest-page `docker-compose.yml` uses `postgres:16-alpine` (≠ prod 18) |
+
+## Current settings and why (all in `helm/api/values.yaml`)
+
+```yaml
+postgresql:
+  image: { tag: latest, digest: sha256:f67b10b1… }    # never float on latest again: a restart could jump majors
+  primary:
+    startupProbe:   { enabled: true, initialDelaySeconds: 15, periodSeconds: 10, timeoutSeconds: 15, failureThreshold: 180 }  # 30 min
+    livenessProbe:  { enabled: true, initialDelaySeconds: 0, periodSeconds: 30, timeoutSeconds: 15, failureThreshold: 10 }
+    readinessProbe: { enabled: true, initialDelaySeconds: 5, periodSeconds: 10, timeoutSeconds: 15, failureThreshold: 6 }
+    terminationGracePeriodSeconds: 120                # room for a clean shutdown → no crash recovery next start
+    extendedConfiguration: |
+      recovery_init_sync_method = syncfs              # crash recovery syncs the FS once instead of every file (HDD)
+      checkpoint_timeout = 60s                        # end-of-recovery waited a full checkpoint_timeout; 60s caps it
+      io_method = sync                                # THE FIX: see below
+```
+
+### The io_method = sync workaround (2026-10-29/30 outage)
+
+After unclean shutdowns PG 18.4 logged `ready to accept connections` but never answered: ~100 backends
+stuck in `authentication` (`S`, `ep_poll`), io workers asleep, `authentication_timeout` never firing,
+recovery always pausing exactly `checkpoint_timeout`. PG 18's default `io_method = worker` makes
+backends wait for io worker processes via latch wake-ups; those wake-ups (signalfd/epoll) were not
+arriving. `io_method = sync` makes each backend do its own reads → DB up in ~2 min.
+
+- Signal masks were checked and normal, so it's not a misconfiguration inside the container.
+- Prime suspect: kernel 7.0.0-42 (all hangs began after its first boot on 2026-10-28). Untested.
+- Remaining risk: other latch-based waits (lock waits, checkpoint requests) may still be slow. If the DB shows odd stalls, suspect this first.
+- Remove `io_method = sync` only after proving the kernel/environment is fixed.
+
+## Health and access
+
+```bash
+kubectl get pod fest-descans-api-postgresql-0 -n fest-descans
+kubectl exec -n fest-descans fest-descans-api-postgresql-0 -- pg_isready -t 10 -h 127.0.0.1 -U fest-descans
+kubectl exec -it -n fest-descans fest-descans-api-postgresql-0 -- sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -U postgres -d fest-descans'
+```
+Always pass `-U` to `pg_isready` in this container (without it: `no attempt`, exit 3 — client quirk).
+
+## Backup and restore
+
+```bash
+# Backup (DB must answer pg_isready)
+kubectl exec -n fest-descans fest-descans-api-postgresql-0 -- sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -U postgres -d fest-descans' > ~/fest-descans-$(date +%F).sql
+ls -lh ~/fest-descans-*.sql; head -3 ~/fest-descans-*.sql; grep -c '^COPY' ~/fest-descans-*.sql
+# then copy off the server (PowerShell on Edu's PC):
+#   scp edu@192.168.68.53:~/fest-descans-*.sql C:\Users\EduardOlivenzaSole\Claude\Projects\LocalServer\
+
+# Restore into an empty database
+kubectl exec -i -n fest-descans fest-descans-api-postgresql-0 -- sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -U postgres -d fest-descans' < fest-descans-YYYY-MM-DD.sql
+```
+No automated backup exists yet. Planned: nightly CronJob running `pg_dump` to a location off the laptop.
+
+Safe stop (before reboots / maintenance): `kubectl exec -n fest-descans fest-descans-api-postgresql-0 -- pg_ctl -D /bitnami/postgresql/data stop -m fast -t 120`.
+
+## Admin users of the website
+
+Table `"AdminUser"` (email, name, argon2 `passwordHash`). Passwords cannot be read back.
+```bash
+kubectl exec -n fest-descans fest-descans-api-postgresql-0 -- sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -U postgres -d fest-descans -c "select email, name, \"updatedAt\" from \"AdminUser\";"'
+```
+The fest-page seed (`packages/db/src/seed.ts`, public repo) creates `admin@festpage.com` / `admin123!`. If that still works in production, change it. Reset procedure: generate an argon2 hash with the api image (node + `argon2` package are inside it) and `UPDATE "AdminUser" SET "passwordHash" = '<hash>' WHERE email = '...'`.
+
+Changing DB passwords: Bitnami reads the secret only at first init. Rotate = `ALTER USER "fest-descans" PASSWORD '...'` (and `postgres`) inside PG **and** re-seal the secret (see `homelab-secrets`) in the same window.
+
+## Planned: migrate off Bitnami to official `postgres:18`
+
+Why: Bitnami stopped free versioned images (2025); chart 13.4.4 targets PG 16 while running PG 18; md5 auth default; every problem in this file came from this combo.
+Plan (downtime of a few minutes, do on a quiet day, after a verified `pg_dump`):
+1. In fest-page `helm/api`: set `postgresql.enabled: false`, add a small StatefulSet + Service **named `fest-descans-api-postgresql`** (so `DATABASE_URL` doesn't change) using `postgres:18.x` pinned, `POSTGRES_DB/USER/PASSWORD` from secret `fest-descans-api`, a **new** PVC, `password_encryption=scram-sha-256`, the same generous probes, and keep `io_method = sync` until the kernel question is settled.
+2. Right before pushing, take the migration dump with `--clean --if-exists` (adds DROP statements, so it restores cleanly even if Prisma already created the tables):
+   `kubectl exec -n fest-descans fest-descans-api-postgresql-0 -- sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dump --clean --if-exists -U postgres -d fest-descans' > ~/fest-descans-migration.sql`
+3. Push; ArgoCD replaces Bitnami with the new empty DB; the api `migrate` initContainer creates the schema.
+4. Restore: `kubectl exec -i ... psql -U <user> -d fest-descans < ~/fest-descans-migration.sql` (official image: superuser is the `POSTGRES_USER`), then `kubectl rollout restart deployment fest-descans-api -n fest-descans`.
+5. Verify the website/admin (products, admin login). Delete the old Bitnami PVC only after a few days.
+Align `docker-compose.yml` to `postgres:18` at the same time.

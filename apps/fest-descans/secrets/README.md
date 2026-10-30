@@ -1,2 +1,2 @@
-Aquí van los SealedSecrets del namespace `fest-descans`:
-`ghcr-credentials.yaml` y `fest-descans-api.yaml`. Cómo generarlos: README raíz, paso 2.
+SealedSecrets for namespace `fest-descans` (`ghcr-credentials`, `fest-descans-api`).
+How to create or rotate them: `.claude/skills/homelab-secrets/SKILL.md`.

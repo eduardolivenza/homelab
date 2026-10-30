@@ -1,9 +1,10 @@
-# Copiado tal cual de la Application que hoy corre en el cluster.
+# Values of the Home Assistant chart (pajikos). Originally copied 1:1 from the hand-made
+# Application; see .claude/skills/homelab-context/references/decisions.md (D8).
 replicaCount: 1
 image:
   repository: ghcr.io/home-assistant/home-assistant
-  # TODO: fijar la versión que corre hoy (Ajustes > Acerca de en HA) en vez de "stable",
-  # para que un reinicio no te actualice HA sin avisar. No bajar de versión.
+  # Pinned on purpose (never "stable"). Renovate opens one PR per monthly release.
+  # HA cannot be downgraded: back up before each upgrade (homelab-upgrades skill).
   tag: 2026.10.4
 env:
   - name: TZ
