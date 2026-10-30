@@ -16,10 +16,17 @@ description: Sealed Secrets on the homelab — which secrets exist, how to read,
 
 | Secret | Namespace | SealedSecret file | Keys | Used by |
 |---|---|---|---|---|
-| `ghcr-credentials` | fest-descans | `apps/fest-descans/secrets/ghcr-credentials.yaml` | `.dockerconfigjson` | image pulls from ghcr.io (GitHub PAT) |
-| `fest-descans-api` | fest-descans | `apps/fest-descans/secrets/fest-descans-api.yaml` | `JWT_SECRET`, `password`, `postgres-password` | api + PostgreSQL (Bitnami `existingSecret`) |
+| `ghcr-credentials` | fest-descans | **fest-page** `helm/api/templates/sealed-ghcr-credentials.yaml` | `.dockerconfigjson` | image pulls from ghcr.io (GitHub PAT) |
+| `fest-descans-api` | fest-descans | **fest-page** `helm/api/templates/sealed-secret.yaml` | `JWT_SECRET`, `password`, `postgres-password` | api + PostgreSQL (Bitnami `existingSecret`) |
 | `cloudflared-credentials` | cloudflared | `platform/cloudflared/templates/sealed-credentials.yaml` | `credentials.json` | tunnel `96ed517e-…` |
 | `argocd-initial-admin-secret` | argocd | not in Git | `password` | ArgoCD admin first login (delete after changing the password) |
+
+**Rule (since 2026-10-30):** an app's secrets live in the repo that owns the app's chart, as
+SealedSecrets inside the chart's `templates/` (deployed and pruned with the app). This repo only holds
+secrets of shared/platform components (cloudflared). See decision D15.
+`ghcr-credentials` is in the api chart but used by web, admin and api (same namespace); each chart's
+`values.yaml` sets `global.imagePullSecrets: [{name: ghcr-credentials}]`. Images stay private (decided
+2026-10-30), so the GitHub PAT inside it must be renewed when it expires.
 
 ## Read a secret
 
@@ -38,7 +45,9 @@ kubectl create secret generic <name> -n <ns> \
   --dry-run=client -o yaml | kubeseal -o yaml > <path-in-repo>.yaml
 git add <path> && git commit -m "Rotate <name>" && git push
 ```
-- For a file-based secret in a Helm chart directory (like cloudflared), put the SealedSecret under `templates/`. Base64 contains no `{{`, so Helm passes it through.
+- Path: for fest-descans secrets, `~/repositories/fest-page/helm/api/templates/<file>.yaml` (commit in fest-page, `git pull --rebase` first). For platform secrets, the component's chart `templates/` in this repo.
+- SealedSecrets inside a Helm chart go under `templates/`. Base64 contains no `{{`, so Helm passes them through (check: `grep -c '{{' file` → 0, and `helm template` renders it).
+- Moving a SealedSecret file between repos/charts needs no re-sealing (it is bound to name + namespace, not to a path). Safe move: stop managing it in the old app first (Application without finalizer, or remove the file with prune off), then add it to the new app; check `metadata.annotations["argocd.argoproj.io/tracking-id"]`.
 - **Database passwords**: changing `password` / `postgres-password` in the secret does NOT change them inside PostgreSQL (Bitnami only reads them at first init). Run `ALTER USER ... PASSWORD` in PostgreSQL in the same maintenance window.
 
 ## Seal a secret that already exists in the cluster (migration recipe)

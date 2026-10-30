@@ -30,7 +30,7 @@ Each entry: decision → why → tradeoff / what we gave up → revisit when.
 - Tunnel credentials are a SealedSecret inside the cloudflared chart (`templates/sealed-credentials.yaml`); the route list is `platform/cloudflared/values.yaml`. DNS records are still manual (Cloudflare dashboard / `cloudflared tunnel route dns`).
 
 ## D6. ArgoCD manages itself
-- **Decision:** `platform/argocd/kustomization.yaml` = upstream `install.yaml` at a pinned version + patches. `prune: false` on the `argocd`, `root` and `fest-descans-secrets` apps.
+- **Decision:** `platform/argocd/kustomization.yaml` = upstream `install.yaml` at a pinned version + patches. `prune: false` on the `argocd` and `root` apps.
 - **Why:** upgrades via Git/Renovate; no forgotten manual installs.
 - **Tradeoff:** a bad commit can break ArgoCD itself (recover with `kubectl apply -k platform/argocd --server-side`). With `prune: false`, removed resources must be deleted by hand once (was needed for Dex/notifications).
 - Patches: Dex and notifications controller deleted (RAM; only `admin` login is used), `argocd-server` Service as NodePort 30080/30443.
@@ -63,6 +63,12 @@ Each entry: decision → why → tradeoff / what we gave up → revisit when.
 ## D13. Server pushes to GitHub with an account-wide SSH key
 - Started with per-repo deploy keys; Edu chose to add the server key to his GitHub account instead.
 - **Tradeoff:** the server can write to all of Edu's repos. Keep `~/.ssh` private; remove the key if the server is retired.
+
+## D15. App secrets live with the app (fest-page), not in homelab
+- **Decision (2026-10-30):** `fest-descans-api` and `ghcr-credentials` SealedSecrets moved to fest-page `helm/api/templates/`; `global.imagePullSecrets` moved from the ApplicationSet parameter to each chart's values. The `fest-descans-secrets` Application was removed.
+- **Why:** the chart defines the secret's keys (one PR for both); fest-page already holds this environment's deployment config (domains, image tags, PG tuning); secrets deploy with the app, no separate app/ordering.
+- **Tradeoff:** fest-page is tied to this cluster's sealing key (it already was, in practice); secrets are now spread over two repos (homelab keeps platform ones: cloudflared).
+- `ghcr-credentials` kept (images stay private) rather than making ghcr packages public; it sits in the api chart but serves web/admin/api.
 
 ## D14. Host config versioned but applied by hand
 - `host/k3s/config.yaml` mirrors `/etc/rancher/k3s/config.yaml` (currently only `disable: [traefik]`). Copy + `sudo systemctl restart k3s` to apply. Ansible planned.

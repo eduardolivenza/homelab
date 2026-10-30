@@ -39,3 +39,8 @@
 - Key evidence: after logging `ready to accept connections`, PG answered nothing (not even via unix socket); ~100 backends stuck in `authentication` state in `ep_poll`; 3 `io worker` processes asleep; recovery always waited **exactly 5 min** (= checkpoint_timeout) between `redo done` and the end-of-recovery checkpoint; authentication_timeout (60 s) never fired. Signal masks were normal (SIGURG blocked for signalfd, not ignored).
 - Conclusion: inter-process latch wake-ups (signalfd/epoll) not working → PG 18's default `io_method = worker` blocks forever. **Fix: `io_method = sync`** (+ `checkpoint_timeout = 60s`). DB came up in ~2 min, all apps healthy.
 - Suspected underlying cause: kernel 7.0.0-42 (everything started after first booting it). Not yet verified.
+
+## 2026-10-30 — documentation, time zone, secrets move
+- Added `CLAUDE.md` + `.claude/skills/` (this documentation) and rewrote the README.
+- Server time zone changed from `Etc/UTC` to `Europe/Madrid` (`timedatectl`); NTP was already synced. Containers and Kubernetes still log in UTC (PostgreSQL logs say `GMT`).
+- Moved fest-descans SealedSecrets to fest-page (decision D15) with zero downtime: removed the `fest-descans-secrets` Application (no finalizer → secrets stayed), then the `fest-descans-api` app adopted both SealedSecrets; Secrets kept their original age.

@@ -73,7 +73,7 @@ Known causes: liveness kill during slow start (#2/#3), server thrashing (#1), a 
 
 - `ComparisonError ... authentication required`: stale repo credential → delete it (`kubectl get secret -n argocd -l argocd.argoproj.io/secret-type=repository`).
 - `... not a valid chart repository ... 404`: wrong chart repo URL (sealed-secrets is `https://bitnami.github.io/sealed-secrets`).
-- `OutOfSync` on `argocd`/`root`/`fest-descans-secrets`: `prune: false` → delete the extra resource by hand.
+- `OutOfSync` on `argocd`/`root`: `prune: false` → delete the extra resource by hand.
 - Stale status after a fix: `kubectl annotate application <app> -n argocd argocd.argoproj.io/refresh=hard --overwrite`.
 
 ## 8. Website or HA unreachable from the internet

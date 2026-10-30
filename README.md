@@ -12,7 +12,6 @@ argocd-apps/               one Application per component (managed by "root")
 platform/argocd/           ArgoCD managing itself (kustomize + patches)
 platform/cloudflared/      Cloudflare Tunnel (routes + sealed credentials)
 apps/home-assistant/       Home Assistant chart values
-apps/fest-descans/secrets/ SealedSecrets for the website
 host/k3s/config.yaml       K3s config (copied by hand to /etc/rancher/k3s/)
 renovate.json              weekly dependency PRs
 ```

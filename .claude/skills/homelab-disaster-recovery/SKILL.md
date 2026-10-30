@@ -47,7 +47,7 @@ Test: does HA start fast? Remove `io_method = sync` temporarily — does Postgre
 
 ## Full rebuild from zero (new disk / new machine)
 
-1. **OS:** Ubuntu Server, hostname `asusold`, user `edu`, OpenSSH. Same LAN IP via the Deco DHCP reservation (192.168.68.53) or update references (HA LAN URL, ArgoCD URL). Laptop: `HandleLidSwitch=ignore` in `/etc/systemd/logind.conf`. Create `/home/edu/ha-recordings`.
+1. **OS:** Ubuntu Server, hostname `asusold`, user `edu`, OpenSSH, `sudo timedatectl set-timezone Europe/Madrid`. Same LAN IP via the Deco DHCP reservation (192.168.68.53) or update references (HA LAN URL, ArgoCD URL). Laptop: `HandleLidSwitch=ignore` in `/etc/systemd/logind.conf`. Create `/home/edu/ha-recordings`.
 2. **K3s with the versioned config:**
    ```bash
    git clone https://github.com/eduardolivenza/homelab.git ~/repositories/homelab && cd ~/repositories/homelab

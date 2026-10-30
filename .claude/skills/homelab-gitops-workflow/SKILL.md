@@ -14,12 +14,11 @@ argocd-apps/                  one Application (or ApplicationSet) per component;
   argocd.yaml                 → platform/argocd          (prune: false)
   sealed-secrets.yaml         → Helm chart sealed-secrets (kube-system)
   cloudflared.yaml            → platform/cloudflared     (ns cloudflared)
-  fest-descans.yaml           → ApplicationSet web/admin/api from fest-page repo + app fest-descans-secrets (prune: false)
+  fest-descans.yaml           → ApplicationSet web/admin/api from fest-page repo helm/<app> (secrets included there)
   home-assistant.yaml         → pajikos chart + values from apps/home-assistant/values.yaml ($values multi-source)
 platform/argocd/              kustomization: upstream install.yaml (pinned) + patches
 platform/cloudflared/         local Helm chart; values.yaml has the tunnel routes; templates/sealed-credentials.yaml
 apps/home-assistant/values.yaml
-apps/fest-descans/secrets/    SealedSecrets for namespace fest-descans
 host/k3s/config.yaml          copy of /etc/rancher/k3s/config.yaml (applied by hand)
 renovate.json                 Renovate config (whitelisted in .gitignore)
 .gitignore                    ignores *.json, *-secret.yaml, *.unsealed.yaml, .env — never commit plaintext secrets
@@ -69,7 +68,7 @@ kubectl get pods -A | grep -vE 'Running|Completed'
 1. Prefer an upstream Helm chart with a **pinned** `targetRevision` and pinned image tag.
 2. Create `argocd-apps/<app>.yaml` (copy `home-assistant.yaml` for chart + values-in-repo pattern) and `apps/<app>/values.yaml`.
 3. Set resources requests/limits and **generous probes** (startupProbe, `timeoutSeconds` ≥ 5) — the disk is slow.
-4. Secrets → SealedSecret in `apps/<app>/secrets/` plus an Application for that path (see `fest-descans-secrets`).
+4. Secrets → SealedSecrets inside the app chart's `templates/` (in the app's own repo if it has one — see decision D15 and `homelab-secrets`).
 5. Exposure: internet → add a route in `platform/cloudflared/values.yaml` (`http://<svc>.<ns>.svc.cluster.local:<port>`) **and** a DNS CNAME `<name>` → `96ed517e-9c76-4e93-8d7d-220cad16eed3.cfargotunnel.com` (proxied) in Cloudflare; consider Cloudflare Access. LAN only → NodePort (30000–32767) or hostNetwork.
 6. Check RAM before adding anything: `free -h`, `kubectl top pods -A --sort-by=memory`.
 

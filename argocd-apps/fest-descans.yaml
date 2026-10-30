@@ -1,5 +1,5 @@
-# Web de fest-descans. El código y los charts siguen en el repo fest-page;
-# aquí solo se declara QUÉ se despliega.
+# fest-descans website. Code, charts, values and its SealedSecrets live in the
+# fest-page repo (helm/<app>); this repo only declares WHAT is deployed.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -23,10 +23,6 @@ spec:
         repoURL: https://github.com/eduardolivenza/fest-page
         targetRevision: HEAD
         path: "helm/{{app}}"
-        helm:
-          parameters:
-            - name: global.imagePullSecrets[0].name
-              value: ghcr-credentials
       destination:
         server: https://kubernetes.default.svc
         namespace: fest-descans

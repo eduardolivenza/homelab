@@ -19,7 +19,7 @@ Not in this repo: it is the Bitnami `postgresql` **subchart (13.4.4, vendored tg
 | Image | `docker.io/bitnami/postgresql@sha256:f67b10b185d344b15e9999b57bdbedb13b9a4c33aa3a939467ee519cec49d40e` = **PostgreSQL 18.4** (tag `latest` + pinned `digest`) |
 | Data dir | `/bitnami/postgresql/data`, runs as UID 1001 |
 | Database / app user | `fest-descans` / `fest-descans` |
-| Passwords | Secret `fest-descans-api`: `password` (app user), `postgres-password` (superuser `postgres`) — sealed in `apps/fest-descans/secrets/` |
+| Passwords | Secret `fest-descans-api`: `password` (app user), `postgres-password` (superuser `postgres`) — SealedSecret in fest-page `helm/api/templates/sealed-secret.yaml` |
 | Schema | Prisma, migrations in fest-page `packages/db/prisma/migrations`, applied by the api's `migrate` initContainer (`prisma migrate deploy`, retries every 5 s forever) |
 | Local dev | fest-page `docker-compose.yml` uses `postgres:16-alpine` (≠ prod 18) |
 
