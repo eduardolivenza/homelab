@@ -41,9 +41,13 @@ Then wait 5–10 min and run the health check from `homelab-troubleshooting`.
 - Run now / debug:
   ```bash
   kubectl create job --from=cronjob/ha-config-backup ha-config-backup-manual -n home-assistant
-  kubectl logs -n home-assistant job/ha-config-backup-manual -f
-  kubectl delete job ha-config-backup-manual -n home-assistant
+  kubectl logs -n home-assistant job/ha-config-backup-manual -f     # timestamped steps; Ctrl+C only stops following
+  kubectl delete job ha-config-backup-manual -n home-assistant       # only after reading the logs
   ```
+  The script fails fast with a clear message if GitHub is unreachable or the deploy key is wrong
+  (`ERROR: cannot reach or authenticate`): check the key is on the repo with **Allow write access**.
+  Lesson (2026-10-31): never re-run a block that contains `kubeseal` + `shred` — the second run seals
+  nothing and overwrites the SealedSecret file with an empty one (fixed with `git revert`).
 - Restore a file: take it from the repo and copy it in: `kubectl cp configuration.yaml home-assistant/home-assistant-0:/config/configuration.yaml -c home-assistant`, then restart HA or reload YAML from the UI.
 - This is history for YAML, **not** a full backup.
 
