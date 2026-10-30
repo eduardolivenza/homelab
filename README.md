@@ -9,9 +9,10 @@ CLAUDE.md                  entry point for AI assistants
 .claude/skills/            full documentation: context, decisions, workflows, runbooks
 bootstrap/root-app.yaml    the only manifest applied by hand
 argocd-apps/               one Application per component (managed by "root")
-platform/argocd/           ArgoCD managing itself (kustomize + patches)
-platform/cloudflared/      Cloudflare Tunnel (routes + sealed credentials)
-apps/home-assistant/       Home Assistant chart values
+components/<name>/         everything a component needs; argocd-apps/<name>.yaml deploys it
+  argocd/                  ArgoCD managing itself (kustomize + patches)
+  cloudflared/             Cloudflare Tunnel (local chart: routes + sealed credentials)
+  home-assistant/          Home Assistant chart values
 host/k3s/config.yaml       K3s config (copied by hand to /etc/rancher/k3s/)
 renovate.json              weekly dependency PRs
 ```
@@ -31,7 +32,7 @@ renovate.json              weekly dependency PRs
 ## Bootstrap order (new cluster)
 
 1. K3s with `host/k3s/config.yaml`.
-2. `kubectl apply -k platform/argocd --server-side --force-conflicts`.
+2. `kubectl apply -k components/argocd --server-side --force-conflicts`.
 3. Restore the Sealed Secrets key backup, then `kubectl apply -f argocd-apps/sealed-secrets.yaml`.
 4. `kubectl apply -f bootstrap/root-app.yaml`.
 

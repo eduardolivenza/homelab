@@ -10,7 +10,7 @@
     {
       "customType": "regex",
       "description": "ArgoCD self-managed install",
-      "managerFilePatterns": ["/^platform/argocd/kustomization\\.yaml$/"],
+      "managerFilePatterns": ["/^components/argocd/kustomization\\.yaml$/"],
       "matchStrings": ["argoproj/argo-cd/(?<currentValue>v[0-9.]+)/manifests"],
       "depNameTemplate": "argoproj/argo-cd",
       "datasourceTemplate": "github-releases"

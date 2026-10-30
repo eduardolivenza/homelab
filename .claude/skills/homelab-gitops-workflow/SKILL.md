@@ -11,18 +11,21 @@ description: How to change anything on the homelab cluster through this repo —
 CLAUDE.md                     entry point for Claude
 bootstrap/root-app.yaml       the only manifest applied by hand (app-of-apps root)
 argocd-apps/                  one Application (or ApplicationSet) per component; synced by "root"
-  argocd.yaml                 → platform/argocd          (prune: false)
+  argocd.yaml                 → components/argocd          (prune: false)
   sealed-secrets.yaml         → Helm chart sealed-secrets (kube-system)
-  cloudflared.yaml            → platform/cloudflared     (ns cloudflared)
+  cloudflared.yaml            → components/cloudflared     (ns cloudflared)
   fest-descans.yaml           → ApplicationSet web/admin/api from fest-page repo helm/<app> (secrets included there)
-  home-assistant.yaml         → pajikos chart + values from apps/home-assistant/values.yaml ($values multi-source)
-platform/argocd/              kustomization: upstream install.yaml (pinned) + patches
-platform/cloudflared/         local Helm chart; values.yaml has the tunnel routes; templates/sealed-credentials.yaml
-apps/home-assistant/values.yaml
+  home-assistant.yaml         → pajikos chart + values from components/home-assistant/values.yaml ($values multi-source)
+components/                   one folder per component, whatever it needs (rule: argocd-apps/<x>.yaml deploys components/<x>/)
+  argocd/                     kustomization: upstream install.yaml (pinned) + patches
+  cloudflared/                local Helm chart; values.yaml has the tunnel routes; templates/sealed-credentials.yaml
+  home-assistant/values.yaml  values for the external pajikos chart
 host/k3s/config.yaml          copy of /etc/rancher/k3s/config.yaml (applied by hand)
 renovate.json                 Renovate config (whitelisted in .gitignore)
 .gitignore                    ignores *.json, *-secret.yaml, *.unsealed.yaml, .env — never commit plaintext secrets
 ```
+
+Applications carry the label `homelab/tier: platform` (argocd, sealed-secrets, cloudflared) or `app` (home-assistant, fest-descans) — filter by it in the ArgoCD UI or with `kubectl get applications -n argocd -l homelab/tier=app`. A component that is just an external chart with default values (sealed-secrets) has no folder.
 
 The `root` app has `prune: false`: deleting a file in `argocd-apps/` does **not** delete the Application. Delete it by hand (`kubectl delete application <name> -n argocd`) after removing the file.
 
@@ -39,7 +42,7 @@ kubectl get applications -n argocd         # expect Synced / Healthy
 ```
 
 - ArgoCD polls every ~3 min; the annotation forces it now. There is no GitHub webhook.
-- Render locally before pushing when touching kustomize/Helm: `kubectl kustomize platform/argocd`, `helm template x platform/cloudflared -n cloudflared`.
+- Render locally before pushing when touching kustomize/Helm: `kubectl kustomize components/argocd`, `helm template x components/cloudflared -n cloudflared`.
 - For changes in fest-page (`~/repositories/fest-page`) use `git pull --rebase` first: its CI pushes image-tag commits to `main` all the time.
 - Commit messages: imperative, say what and why (`home-assistant: add startupProbe for slow disk`).
 - Claude cannot push. Hand Edu a single, reviewable block per step and tell him the expected output.
@@ -66,10 +69,10 @@ kubectl get pods -A | grep -vE 'Running|Completed'
 ## Adding a new app (template)
 
 1. Prefer an upstream Helm chart with a **pinned** `targetRevision` and pinned image tag.
-2. Create `argocd-apps/<app>.yaml` (copy `home-assistant.yaml` for chart + values-in-repo pattern) and `apps/<app>/values.yaml`.
+2. Create `argocd-apps/<app>.yaml` (copy `home-assistant.yaml` for chart + values-in-repo pattern) and `components/<app>/values.yaml`; add the label `homelab/tier: app` (or `platform`).
 3. Set resources requests/limits and **generous probes** (startupProbe, `timeoutSeconds` ≥ 5) — the disk is slow.
 4. Secrets → SealedSecrets inside the app chart's `templates/` (in the app's own repo if it has one — see decision D15 and `homelab-secrets`).
-5. Exposure: internet → add a route in `platform/cloudflared/values.yaml` (`http://<svc>.<ns>.svc.cluster.local:<port>`) **and** a DNS CNAME `<name>` → `96ed517e-9c76-4e93-8d7d-220cad16eed3.cfargotunnel.com` (proxied) in Cloudflare; consider Cloudflare Access. LAN only → NodePort (30000–32767) or hostNetwork.
+5. Exposure: internet → add a route in `components/cloudflared/values.yaml` (`http://<svc>.<ns>.svc.cluster.local:<port>`) **and** a DNS CNAME `<name>` → `96ed517e-9c76-4e93-8d7d-220cad16eed3.cfargotunnel.com` (proxied) in Cloudflare; consider Cloudflare Access. LAN only → NodePort (30000–32767) or hostNetwork.
 6. Check RAM before adding anything: `free -h`, `kubectl top pods -A --sort-by=memory`.
 
 ## Useful tools

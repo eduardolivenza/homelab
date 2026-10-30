@@ -22,7 +22,7 @@ description: Sealed Secrets on the homelab — which secrets exist, how to read,
 | | | | `password` | Password of PostgreSQL user `fest-descans`. Used by the api (`DATABASE_URL`) and its `migrate` initContainer; also Bitnami `existingSecret`. |
 | | | | `postgres-password` | Password of the PostgreSQL superuser `postgres` (`pg_dump`, `psql`, maintenance). |
 | `ghcr-credentials` | fest-descans | **fest-page** `helm/api/templates/sealed-ghcr-credentials.yaml` | `.dockerconfigjson` | GitHub PAT (`read:packages`) to pull the private web/admin/api images from ghcr.io. When it expires new pods fail with `ImagePullBackOff`. |
-| `cloudflared-credentials` | cloudflared | `platform/cloudflared/templates/sealed-credentials.yaml` | `credentials.json` | Credentials of Cloudflare Tunnel `96ed517e-…`. Without it the website and HA are unreachable from the internet. |
+| `cloudflared-credentials` | cloudflared | `components/cloudflared/templates/sealed-credentials.yaml` | `credentials.json` | Credentials of Cloudflare Tunnel `96ed517e-…`. Without it the website and HA are unreachable from the internet. |
 
 The two DB passwords are read by PostgreSQL only at first init: rotating them in the secret also needs `ALTER USER` inside the DB.
 
@@ -99,6 +99,6 @@ Restore on a new cluster **before** the controller starts (see `homelab-disaster
 `kubectl apply -f sealed-secrets-key.backup.yaml` then deploy the controller (or `kubectl delete pod -n kube-system -l app.kubernetes.io/name=sealed-secrets` to reload).
 
 If the key is lost: every SealedSecret is useless. Recreate from source values and re-seal:
-- `cloudflared-credentials`: on a machine with a browser, `cloudflared tunnel login` then `cloudflared tunnel token --cred-file credentials.json fest-descans` regenerates the credentials file for the existing tunnel. Alternative: create a new tunnel and update `tunnelId` in `platform/cloudflared/values.yaml` + the DNS CNAMEs.
+- `cloudflared-credentials`: on a machine with a browser, `cloudflared tunnel login` then `cloudflared tunnel token --cred-file credentials.json fest-descans` regenerates the credentials file for the existing tunnel. Alternative: create a new tunnel and update `tunnelId` in `components/cloudflared/values.yaml` + the DNS CNAMEs.
 - `ghcr-credentials`: new GitHub PAT with `read:packages`.
 - `fest-descans-api`: new `JWT_SECRET` (logs everyone out); DB passwords must match what's inside PostgreSQL (or reset them with `ALTER USER`).

@@ -40,7 +40,7 @@ stalls (node flaps `NotReady`) and liveness probes kill slow pods. Recommended h
 
 | Repo | Visibility | Contains |
 |---|---|---|
-| `github.com/eduardolivenza/homelab` (this) | public | Everything deployed on the cluster: ArgoCD apps, platform components, HA values, platform sealed secrets (cloudflared), K3s host config, Renovate config |
+| `github.com/eduardolivenza/homelab` (this) | public | Everything deployed on the cluster: ArgoCD apps (`argocd-apps/`), component configs (`components/`), platform sealed secrets (cloudflared), K3s host config, Renovate config |
 | `github.com/eduardolivenza/fest-page` | public | The fest-descans website monorepo (Next.js web + admin, Fastify API, Prisma), its Dockerfiles, GitHub Actions CI, Helm charts `helm/{web,admin,api}` with this environment's values and its own SealedSecrets |
 
 fest-page CI builds images to `ghcr.io/eduardolivenza/festpage/{web,admin,api}` and commits the new
@@ -67,11 +67,11 @@ fest-page charts are inert leftovers.
 
 | Namespace | What | Managed by |
 |---|---|---|
-| `argocd` | ArgoCD v3.5.x (server, repo-server, application-controller, applicationset-controller, redis). Dex and notifications removed. | `argocd-apps/argocd.yaml` → `platform/argocd` (kustomize over upstream install.yaml) |
+| `argocd` | ArgoCD v3.5.x (server, repo-server, application-controller, applicationset-controller, redis). Dex and notifications removed. | `argocd-apps/argocd.yaml` → `components/argocd` (kustomize over upstream install.yaml) |
 | `kube-system` | K3s core (coredns, local-path-provisioner, metrics-server) + sealed-secrets-controller | K3s / `argocd-apps/sealed-secrets.yaml` |
-| `cloudflared` | Tunnel connector | `platform/cloudflared` (local Helm chart) |
+| `cloudflared` | Tunnel connector | `components/cloudflared` (local Helm chart) |
 | `fest-descans` | web, admin, api (+ migrate initContainer), PostgreSQL (Bitnami subchart of the api chart) | `argocd-apps/fest-descans.yaml` (ApplicationSet → fest-page `helm/{web,admin,api}`); its SealedSecrets are in fest-page `helm/api/templates/` |
-| `home-assistant` | Home Assistant StatefulSet (pajikos chart), hostNetwork, PVC 5Gi + hostPath `/home/edu/ha-recordings` | `argocd-apps/home-assistant.yaml` + `apps/home-assistant/values.yaml` |
+| `home-assistant` | Home Assistant StatefulSet (pajikos chart), hostNetwork, PVC 5Gi + hostPath `/home/edu/ha-recordings` | `argocd-components/home-assistant.yaml` + `components/home-assistant/values.yaml` |
 
 Home Assistant integrations in use (for upgrade risk): HACS, localtuya, tuya_local (xZetsubou fork,
 thermostat), imou_life (camera, ONVIF/RTSP, person-detection recordings), hisense / hisense_ac_plugin,

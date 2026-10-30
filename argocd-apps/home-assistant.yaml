@@ -5,6 +5,8 @@ kind: Application
 metadata:
   name: home-assistant
   namespace: argocd
+  labels:
+    homelab/tier: app
 spec:
   project: default
   sources:
@@ -13,7 +15,7 @@ spec:
       targetRevision: 0.3.89
       helm:
         valueFiles:
-          - $values/apps/home-assistant/values.yaml
+          - $values/components/home-assistant/values.yaml
     - repoURL: https://github.com/eduardolivenza/homelab
       targetRevision: HEAD
       ref: values

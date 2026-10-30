@@ -14,11 +14,11 @@ description: How upgrades work on the homelab — Renovate PRs, merge order, and
 
 | Dependency | File | Manager |
 |---|---|---|
-| HA image `ghcr.io/home-assistant/home-assistant` | `apps/home-assistant/values.yaml` | helm-values (one PR per monthly release) |
-| HA chart `home-assistant` (pajikos) | `argocd-apps/home-assistant.yaml` | argocd |
-| `cloudflare/cloudflared` | `platform/cloudflared/values.yaml` | helm-values |
+| HA image `ghcr.io/home-assistant/home-assistant` | `components/home-assistant/values.yaml` | helm-values (one PR per monthly release) |
+| HA chart `home-assistant` (pajikos) | `argocd-components/home-assistant.yaml` | argocd |
+| `cloudflare/cloudflared` | `components/cloudflared/values.yaml` | helm-values |
 | `sealed-secrets` chart | `argocd-apps/sealed-secrets.yaml` | argocd |
-| ArgoCD (`argoproj/argo-cd` GitHub releases) | `platform/argocd/kustomization.yaml` | regex custom manager |
+| ArgoCD (`argoproj/argo-cd` GitHub releases) | `components/argocd/kustomization.yaml` | regex custom manager |
 
 - After merging a PR on GitHub: `git pull` the server clone, force a refresh, verify (see `homelab-gitops-workflow`).
 - Renovate is not configured on fest-page yet (an onboarding PR may be open there; tune it before merging — a pnpm/Next.js monorepo produces many PRs).
@@ -56,10 +56,10 @@ Cloudflare dashboard → Networking → Tunnels should show the new connector ve
 
 ## ArgoCD
 
-- Version in `platform/argocd/kustomization.yaml` (`.../argo-cd/vX.Y.Z/manifests/install.yaml`). Minor upgrades via Renovate PR are fine (3.4.4 → 3.5.6 went smoothly).
+- Version in `components/argocd/kustomization.yaml` (`.../argo-cd/vX.Y.Z/manifests/install.yaml`). Minor upgrades via Renovate PR are fine (3.4.4 → 3.5.6 went smoothly).
 - After merge check: `kubectl get pods -n argocd -o jsonpath='{range .items[*]}{.metadata.name}{"  "}{.spec.containers[0].image}{"\n"}{end}'`.
-- If ArgoCD breaks itself: `kubectl apply -k platform/argocd --server-side --force-conflicts` from the server clone.
-- The kustomize patches (Dex/notifications deletion, NodePort) depend on upstream resource names/port order; re-render with `kubectl kustomize platform/argocd` on majors.
+- If ArgoCD breaks itself: `kubectl apply -k components/argocd --server-side --force-conflicts` from the server clone.
+- The kustomize patches (Dex/notifications deletion, NodePort) depend on upstream resource names/port order; re-render with `kubectl kustomize components/argocd` on majors.
 
 ## Sealed Secrets controller
 

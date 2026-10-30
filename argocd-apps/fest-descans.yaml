@@ -5,6 +5,8 @@ kind: ApplicationSet
 metadata:
   name: fest-descans
   namespace: argocd
+  labels:
+    homelab/tier: app
 spec:
   generators:
     - list:
@@ -15,6 +17,8 @@ spec:
   template:
     metadata:
       name: "fest-descans-{{app}}"
+      labels:
+        homelab/tier: app
       finalizers:
         - resources-finalizer.argocd.argoproj.io
     spec:

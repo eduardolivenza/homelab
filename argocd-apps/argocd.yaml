@@ -3,12 +3,14 @@ kind: Application
 metadata:
   name: argocd
   namespace: argocd
+  labels:
+    homelab/tier: platform
 spec:
   project: default
   source:
     repoURL: https://github.com/eduardolivenza/homelab
     targetRevision: HEAD
-    path: platform/argocd
+    path: components/argocd
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

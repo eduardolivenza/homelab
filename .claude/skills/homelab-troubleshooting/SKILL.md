@@ -83,7 +83,7 @@ kubectl get pods -n cloudflared
 kubectl logs -n cloudflared deploy/cloudflared --tail=30
 kubectl get svc -A | grep -E 'fest-descans|home-assistant'
 ```
-Check Cloudflare dashboard → Networking → Tunnels → Healthy. Routes are in `platform/cloudflared/values.yaml` and must use `<svc>.<ns>.svc.cluster.local`. If cloudflared is fine but the app 5xx's, check the app pod (api needs PostgreSQL; its `migrate` initContainer retries forever while the DB is down). HA 400 Bad Request → trusted proxies (see `homelab-upgrades`).
+Check Cloudflare dashboard → Networking → Tunnels → Healthy. Routes are in `components/cloudflared/values.yaml` and must use `<svc>.<ns>.svc.cluster.local`. If cloudflared is fine but the app 5xx's, check the app pod (api needs PostgreSQL; its `migrate` initContainer retries forever while the DB is down). HA 400 Bad Request → trusted proxies (see `homelab-upgrades`).
 
 ## 9. SealedSecret not applied
 

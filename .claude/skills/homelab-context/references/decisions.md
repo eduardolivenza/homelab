@@ -27,12 +27,12 @@ Each entry: decision → why → tradeoff / what we gave up → revisit when.
 ## D5. cloudflared in-cluster, routing straight to Services; Traefik disabled
 - **Why:** CGNAT means no inbound ports, the tunnel is outbound-only and free. Routing directly to ClusterIP Services makes an ingress controller unnecessary; disabling Traefik saved ~70 MB + svclb pod.
 - **Tradeoff:** no host/path routing inside the cluster, no `*.local` hostnames; LAN access uses hostNetwork (HA) or NodePort (ArgoCD). cloudflared runs 2 replicas so rolling upgrades don't cut traffic.
-- Tunnel credentials are a SealedSecret inside the cloudflared chart (`templates/sealed-credentials.yaml`); the route list is `platform/cloudflared/values.yaml`. DNS records are still manual (Cloudflare dashboard / `cloudflared tunnel route dns`).
+- Tunnel credentials are a SealedSecret inside the cloudflared chart (`templates/sealed-credentials.yaml`); the route list is `components/cloudflared/values.yaml`. DNS records are still manual (Cloudflare dashboard / `cloudflared tunnel route dns`).
 
 ## D6. ArgoCD manages itself
-- **Decision:** `platform/argocd/kustomization.yaml` = upstream `install.yaml` at a pinned version + patches. `prune: false` on the `argocd` and `root` apps.
+- **Decision:** `components/argocd/kustomization.yaml` = upstream `install.yaml` at a pinned version + patches. `prune: false` on the `argocd` and `root` apps.
 - **Why:** upgrades via Git/Renovate; no forgotten manual installs.
-- **Tradeoff:** a bad commit can break ArgoCD itself (recover with `kubectl apply -k platform/argocd --server-side`). With `prune: false`, removed resources must be deleted by hand once (was needed for Dex/notifications).
+- **Tradeoff:** a bad commit can break ArgoCD itself (recover with `kubectl apply -k components/argocd --server-side`). With `prune: false`, removed resources must be deleted by hand once (was needed for Dex/notifications).
 - Patches: Dex and notifications controller deleted (RAM; only `admin` login is used), `argocd-server` Service as NodePort 30080/30443.
 
 ## D7. ArgoCD UI on LAN-only NodePort (not through the tunnel)
@@ -69,6 +69,11 @@ Each entry: decision → why → tradeoff / what we gave up → revisit when.
 - **Why:** the chart defines the secret's keys (one PR for both); fest-page already holds this environment's deployment config (domains, image tags, PG tuning); secrets deploy with the app, no separate app/ordering.
 - **Tradeoff:** fest-page is tied to this cluster's sealing key (it already was, in practice); secrets are now spread over two repos (homelab keeps platform ones: cloudflared).
 - `ghcr-credentials` kept (images stay private) rather than making ghcr packages public; it sits in the api chart but serves web/admin/api.
+
+## D16. One `components/` folder instead of `platform/` + `apps/`
+- **Decision (2026-10-30):** `platform/argocd`, `platform/cloudflared` and `apps/home-assistant` moved to `components/<name>/`. Rule: `argocd-apps/<x>.yaml` deploys `components/<x>/`. The infra/app distinction is kept as an Application label `homelab/tier: platform|app`.
+- **Why:** after D15 `apps/` held only HA; folder names didn't match content (full chart vs only values); with ~5 components the extra level added no information.
+- **Tradeoff:** with many components, a split by tier (or by sync wave) could be useful again; revisit then. Option rejected: putting each Application inside its component folder (needs a recursive, filtered root app).
 
 ## D14. Host config versioned but applied by hand
 - `host/k3s/config.yaml` mirrors `/etc/rancher/k3s/config.yaml` (currently only `disable: [traefik]`). Copy + `sudo systemctl restart k3s` to apply. Ansible planned.

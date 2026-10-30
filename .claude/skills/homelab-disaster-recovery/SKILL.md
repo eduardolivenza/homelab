@@ -59,7 +59,7 @@ Test: does HA start fast? Remove `io_method = sync` temporarily — does Postgre
 3. **ArgoCD** (same manifests ArgoCD will later manage):
    ```bash
    kubectl create namespace argocd
-   kubectl apply -k platform/argocd --server-side --force-conflicts
+   kubectl apply -k components/argocd --server-side --force-conflicts
    kubectl wait --for=condition=available --timeout=600s deployment/argocd-server -n argocd
    ```
 4. **Sealed Secrets key first, then the controller:**
