@@ -81,5 +81,11 @@ Each entry: decision → why → tradeoff / what we gave up → revisit when.
 - **Safety added:** `preserveResourcesOnDeletion: true` on the ApplicationSet and `prune: false` on the parent — before, deleting the ApplicationSet would have cascaded to every website workload.
 - Migration was an adoption: `root` (prune: false) left the existing ApplicationSet in place and the new parent took ownership; nothing was redeployed.
 
+## D18. HA config mirrored HA → Git (not GitOps), in a separate private repo
+- **Decision (2026-10-31):** nightly CronJob copies a whitelist of HA YAML files to the private repo `eduardolivenza/home-assistant`. HA remains the owner of its config.
+- **Why mirror instead of Git → HA:** Edu configures HA mostly from the UI, which writes `automations.yaml` etc.; making Git the source would fight the UI. A mirror gives history and file-level restore without changing how he works. Git → HA for a `packages/` folder can be added later.
+- **Why a separate private repo:** HA config describes the home (devices, areas, routines) and could leak tokens; `homelab` is public; nightly commits would clutter `homelab` and trigger ArgoCD refreshes. ArgoCD never reads that repo, so it adds no ArgoCD credentials.
+- **Tradeoffs:** not a full backup (`.storage`, history excluded on purpose) → HA backups still needed. Whitelist means new top-level files are not mirrored until added to `backup.sh`. Deploy key in the cluster has write access to that one repo.
+
 ## D14. Host config versioned but applied by hand
 - `host/k3s/config.yaml` mirrors `/etc/rancher/k3s/config.yaml` (currently only `disable: [traefik]`). Copy + `sudo systemctl restart k3s` to apply. Ansible planned.

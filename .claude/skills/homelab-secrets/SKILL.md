@@ -22,6 +22,7 @@ description: Sealed Secrets on the homelab — which secrets exist, how to read,
 | | | | `password` | Password of PostgreSQL user `fest-descans`. Used by the api (`DATABASE_URL`) and its `migrate` initContainer; also Bitnami `existingSecret`. |
 | | | | `postgres-password` | Password of the PostgreSQL superuser `postgres` (`pg_dump`, `psql`, maintenance). |
 | `ghcr-credentials` | fest-descans | **fest-page** `helm/api/templates/sealed-ghcr-credentials.yaml` | `.dockerconfigjson` | GitHub PAT (`read:packages`) to pull the private web/admin/api images from ghcr.io. When it expires new pods fail with `ImagePullBackOff`. |
+| `ha-config-backup-ssh` | home-assistant | `components/ha-config-backup/sealed-ssh-key.yaml` | `id_ed25519` | Deploy key (write, only repo `eduardolivenza/home-assistant`) used by the nightly HA config mirror. If missing, the CronJob pod stays in `ContainerCreating`. |
 | `cloudflared-credentials` | cloudflared | `components/cloudflared/templates/sealed-credentials.yaml` | `credentials.json` | Credentials of Cloudflare Tunnel `96ed517e-…`. Without it the website and HA are unreachable from the internet. |
 
 The two DB passwords are read by PostgreSQL only at first init: rotating them in the secret also needs `ALTER USER` inside the DB.

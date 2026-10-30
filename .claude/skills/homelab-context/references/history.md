@@ -46,3 +46,7 @@
 - Moved fest-descans SealedSecrets to fest-page (decision D15) with zero downtime: removed the `fest-descans-secrets` Application (no finalizer → secrets stayed), then the `fest-descans-api` app adopted both SealedSecrets; Secrets kept their original age.
 - Repo layout: `platform/` and `apps/` merged into `components/` (decision D16); Applications labelled `homelab/tier`. Paths changed only, no resources redeployed.
 - Parent app `fest-descans` now groups `fest-descans-{web,admin,api}` (decision D17); ApplicationSet hardened with `preserveResourcesOnDeletion`.
+
+## 2026-10-31
+- Added `ha-config-backup` CronJob: nightly HA YAML mirror to private repo `eduardolivenza/home-assistant` (decision D18).
+- Fixed doc paths broken by the D16 rename (`argocd-components/` → `argocd-apps/`).

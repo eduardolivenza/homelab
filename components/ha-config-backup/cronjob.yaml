@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ha-config-backup
+spec:
+  schedule: "17 3 * * *"          # every night 03:17
+  timeZone: Europe/Madrid
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 600
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: backup
+              image: docker.io/library/alpine:3.22
+              command: ["/bin/sh", "/scripts/backup.sh"]
+              resources:
+                requests: { cpu: 10m, memory: 32Mi }
+                limits:   { cpu: 200m, memory: 128Mi }
+              volumeMounts:
+                - { name: config,  mountPath: /config,  readOnly: true }
+                - { name: script,  mountPath: /scripts, readOnly: true }
+                - { name: ssh-key, mountPath: /ssh,     readOnly: true }
+          volumes:
+            # HA's PVC (RWO local-path: fine to share, single node). Mounted read-only.
+            - name: config
+              persistentVolumeClaim:
+                claimName: home-assistant-home-assistant-0
+                readOnly: true
+            - name: script
+              configMap:
+                name: ha-config-backup-script
+            - name: ssh-key
+              secret:
+                secretName: ha-config-backup-ssh
+                defaultMode: 0400

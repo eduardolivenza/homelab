@@ -21,6 +21,7 @@ components/                   one folder per component, whatever it needs (rule:
   argocd/                     kustomization: upstream install.yaml (pinned) + patches
   cloudflared/                local Helm chart; values.yaml has the tunnel routes; templates/sealed-credentials.yaml
   home-assistant/values.yaml  values for the external pajikos chart
+  ha-config-backup/           CronJob mirroring HA YAML config to the private repo eduardolivenza/home-assistant
   fest-descans/               ApplicationSet (preserveResourcesOnDeletion: true) generating the 3 website apps
 host/k3s/config.yaml          copy of /etc/rancher/k3s/config.yaml (applied by hand)
 renovate.json                 Renovate config (whitelisted in .gitignore)

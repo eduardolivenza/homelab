@@ -15,7 +15,7 @@ description: How upgrades work on the homelab — Renovate PRs, merge order, and
 | Dependency | File | Manager |
 |---|---|---|
 | HA image `ghcr.io/home-assistant/home-assistant` | `components/home-assistant/values.yaml` | helm-values (one PR per monthly release) |
-| HA chart `home-assistant` (pajikos) | `argocd-components/home-assistant.yaml` | argocd |
+| HA chart `home-assistant` (pajikos) | `argocd-apps/home-assistant.yaml` | argocd |
 | `cloudflare/cloudflared` | `components/cloudflared/values.yaml` | helm-values |
 | `sealed-secrets` chart | `argocd-apps/sealed-secrets.yaml` | argocd |
 | ArgoCD (`argoproj/argo-cd` GitHub releases) | `components/argocd/kustomization.yaml` | regex custom manager |

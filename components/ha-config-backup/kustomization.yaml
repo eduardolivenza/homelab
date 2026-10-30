@@ -1,0 +1,15 @@
+# Nightly mirror of Home Assistant's YAML config (HA -> Git) into the PRIVATE repo
+# github.com/eduardolivenza/home-assistant. HA stays the owner of its config; Git is history/backup.
+# See .claude/skills/homelab-disaster-recovery/SKILL.md ("Home Assistant config mirror").
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: home-assistant
+resources:
+  - cronjob.yaml
+  - sealed-ssh-key.yaml       # SealedSecret ha-config-backup-ssh (deploy key with write access to the repo)
+configMapGenerator:
+  - name: ha-config-backup-script
+    files:
+      - backup.sh
+generatorOptions:
+  disableNameSuffixHash: true

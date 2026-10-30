@@ -1,0 +1,21 @@
+# Nightly HA config mirror (HA -> private Git repo eduardolivenza/home-assistant).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ha-config-backup
+  namespace: argocd
+  labels:
+    homelab/tier: app
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/eduardolivenza/homelab
+    targetRevision: HEAD
+    path: components/ha-config-backup
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: home-assistant
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

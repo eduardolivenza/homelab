@@ -13,6 +13,7 @@ components/<name>/         everything a component needs; argocd-apps/<name>.yaml
   argocd/                  ArgoCD managing itself (kustomize + patches)
   cloudflared/             Cloudflare Tunnel (local chart: routes + sealed credentials)
   home-assistant/          Home Assistant chart values
+  ha-config-backup/        nightly mirror of HA YAML config to a private repo
 host/k3s/config.yaml       K3s config (copied by hand to /etc/rancher/k3s/)
 renovate.json              weekly dependency PRs
 ```

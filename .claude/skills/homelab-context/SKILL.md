@@ -41,6 +41,7 @@ stalls (node flaps `NotReady`) and liveness probes kill slow pods. Recommended h
 | Repo | Visibility | Contains |
 |---|---|---|
 | `github.com/eduardolivenza/homelab` (this) | public | Everything deployed on the cluster: ArgoCD apps (`argocd-apps/`), component configs (`components/`), platform sealed secrets (cloudflared), K3s host config, Renovate config |
+| `github.com/eduardolivenza/home-assistant` | **private** | Nightly mirror of HA's YAML config (written by the `ha-config-backup` CronJob; never edit by hand expecting HA to pick it up) |
 | `github.com/eduardolivenza/fest-page` | public | The fest-descans website monorepo (Next.js web + admin, Fastify API, Prisma), its Dockerfiles, GitHub Actions CI, Helm charts `helm/{web,admin,api}` with this environment's values and its own SealedSecrets |
 
 fest-page CI builds images to `ghcr.io/eduardolivenza/festpage/{web,admin,api}` and commits the new
@@ -71,7 +72,8 @@ fest-page charts are inert leftovers.
 | `kube-system` | K3s core (coredns, local-path-provisioner, metrics-server) + sealed-secrets-controller | K3s / `argocd-apps/sealed-secrets.yaml` |
 | `cloudflared` | Tunnel connector | `components/cloudflared` (local Helm chart) |
 | `fest-descans` | web, admin, api (+ migrate initContainer), PostgreSQL (Bitnami subchart of the api chart) | parent app `fest-descans` (`argocd-apps/fest-descans.yaml`) → ApplicationSet `components/fest-descans/` → apps `fest-descans-{web,admin,api}` from fest-page `helm/<app>`; its SealedSecrets are in fest-page `helm/api/templates/` |
-| `home-assistant` | Home Assistant StatefulSet (pajikos chart), hostNetwork, PVC 5Gi + hostPath `/home/edu/ha-recordings` | `argocd-components/home-assistant.yaml` + `components/home-assistant/values.yaml` |
+| `home-assistant` | Home Assistant StatefulSet (pajikos chart), hostNetwork, PVC 5Gi + hostPath `/home/edu/ha-recordings` | `argocd-apps/home-assistant.yaml` + `components/home-assistant/values.yaml` |
+| `home-assistant` (same ns) | CronJob `ha-config-backup`: nightly mirror of HA YAML config to the **private** repo `eduardolivenza/home-assistant` | `argocd-apps/ha-config-backup.yaml` + `components/ha-config-backup/` |
 
 Home Assistant integrations in use (for upgrade risk): HACS, localtuya, tuya_local (xZetsubou fork,
 thermostat), imou_life (camera, ONVIF/RTSP, person-detection recordings), hisense / hisense_ac_plugin,
@@ -94,7 +96,7 @@ Highest value first:
 3. Test kernel 7.0.0-38 vs 7.0.0-42 (suspected cause of PG/HA hangs; see `homelab-troubleshooting`).
 4. Hardware: SSD (+ RAM).
 5. fest-page infra review fixes: probe `timeoutSeconds` (default 1 s) on web/admin/api, DB backup CronJob, Node 20 → 22/24, web SSR calls the public API URL instead of in-cluster, remove dead Ingresses, migrate initContainer retries forever, outdated secret comments in values.yaml.
-6. HA backups off the laptop; recordings retention CronJob (days to keep not decided).
+6. HA full backups off the laptop (the Git mirror only covers YAML; `.storage` and history need HA backups, e.g. to Google Drive/OneDrive); recordings retention CronJob (days to keep not decided).
 7. Check disk health with `smartctl` (never done).
 8. Disable Docker on the host if unused (frees RAM).
 9. Cloudflare as code (OpenTofu) + Cloudflare Access in front of HA; host/K3s as code (Ansible).

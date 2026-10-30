@@ -11,7 +11,8 @@ description: Backups, safe reboot, kernel rollback and full rebuild of the homel
 |---|---|---|---|
 | Sealed Secrets key | `kube-system` secrets labelled `sealedsecrets.bitnami.com/sealed-secrets-key` | `kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > ~/sealed-secrets-key.backup.yaml` → copy to password manager | Taken 2026-10-28 on server; off-server copy not confirmed |
 | fest-descans DB | PVC `data-fest-descans-api-postgresql-0` | `pg_dump` (see `fest-descans-postgres`) → copy to PC | Not confirmed |
-| HA config + history | PVC `home-assistant-home-assistant-0` | HA UI → Settings → System → Backups → download | No regular backups yet |
+| HA YAML config | PVC `home-assistant-home-assistant-0` | Automatic: nightly CronJob `ha-config-backup` → private repo `eduardolivenza/home-assistant` (see below) | Since 2026-10-31 |
+| HA full (`.storage`, history, integrations) | same PVC | HA UI → Settings → System → Backups → download / backup agent | No regular backups yet |
 | HA recordings | host `/home/edu/ha-recordings` (~500 MB) | optional | none |
 | Cloudflare tunnel creds | sealed in Git | covered by the key backup | — |
 | Server's GitHub SSH key | `~/.ssh` | regenerate if lost, add to GitHub account | — |
@@ -30,6 +31,21 @@ kubectl exec -n fest-descans fest-descans-api-postgresql-0 -- pg_ctl -D /bitnami
 sudo reboot
 ```
 Then wait 5–10 min and run the health check from `homelab-troubleshooting`.
+
+## Home Assistant config mirror (HA → Git)
+
+- CronJob `ha-config-backup` (ns `home-assistant`, 03:17 Europe/Madrid) mounts HA's PVC **read-only**, rsyncs a **whitelist** and pushes to `git@github.com:eduardolivenza/home-assistant.git` (private) when something changed. Commit message: `HA config <date> (HA <version>)`.
+- Whitelist (in `components/ha-config-backup/backup.sh`): `configuration.yaml`, `automations.yaml`, `scripts.yaml`, `scenes.yaml`, `customize.yaml`, `groups.yaml`, `.HA_VERSION`, `packages/`, `themes/`, `blueprints/`, `custom_templates/`. Never: `secrets.yaml`, `.storage/`, databases, logs, recordings, `custom_components/` (reinstall from HACS). A `.gitignore` in the repo repeats the exclusions.
+- Auth: deploy key with write access on that repo only, in SealedSecret `ha-config-backup-ssh` (`components/ha-config-backup/sealed-ssh-key.yaml`). GitHub's ed25519 host key is pinned in the script.
+- Image `alpine:3.22`, installs git/openssh/rsync each run (needs internet). Uses `rsync --checksum` (same-size edits are detected).
+- Run now / debug:
+  ```bash
+  kubectl create job --from=cronjob/ha-config-backup ha-config-backup-manual -n home-assistant
+  kubectl logs -n home-assistant job/ha-config-backup-manual -f
+  kubectl delete job ha-config-backup-manual -n home-assistant
+  ```
+- Restore a file: take it from the repo and copy it in: `kubectl cp configuration.yaml home-assistant/home-assistant-0:/config/configuration.yaml -c home-assistant`, then restart HA or reload YAML from the UI.
+- This is history for YAML, **not** a full backup.
 
 ## Kernel rollback (one boot only, to test)
 
