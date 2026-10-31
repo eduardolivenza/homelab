@@ -35,7 +35,7 @@ Then wait 5–10 min and run the health check from `homelab-troubleshooting`.
 ## Home Assistant config mirror (HA → Git)
 
 - CronJob `ha-config-backup` (ns `home-assistant`, 03:17 Europe/Madrid) mounts HA's PVC **read-only**, copies a **whitelist** and pushes to `git@github.com:eduardolivenza/home-assistant.git` (private) when something changed. Commit message: `HA config <date> (HA <version>)`.
-- Whitelist (in `components/ha-config-backup/backup.sh`): `configuration.yaml`, `automations.yaml`, `scripts.yaml`, `scenes.yaml`, `customize.yaml`, `groups.yaml`, `.HA_VERSION`, `packages/`, `themes/`, `blueprints/`, `custom_templates/`. Never: `secrets.yaml`, `.storage/`, databases, logs, recordings, `custom_components/` (reinstall from HACS). A `.gitignore` in the repo repeats the exclusions.
+- Whitelist (in `components/ha-config-backup/backup.sh`): `configuration.yaml`, `automations.yaml`, `scripts.yaml`, `scenes.yaml`, `customize.yaml`, `groups.yaml`, `.HA_VERSION`, `packages/`, `themes/`, `blueprints/`, `custom_templates/`, and from `.storage/` **only** the Broadlink learnt codes (`broadlink_remote_*_codes`, `broadlink_remote_*_flags`). Never: `secrets.yaml`, the rest of `.storage/`, databases, logs, recordings, `custom_components/` (reinstall from HACS). A `.gitignore` in the repo repeats the exclusions.
 - Auth: deploy key with write access on that repo only, in SealedSecret `ha-config-backup-ssh` (`components/ha-config-backup/sealed-ssh-key.yaml`). GitHub's ed25519 host key is pinned in the script.
 - Image `alpine:3.22`, installs git/openssh each run (needs internet). Sync is `rm` + `cp -a` per whitelisted item (rsync hung on this host: same never-woken-up symptom as PostgreSQL).
 - Run now / debug:
@@ -49,6 +49,7 @@ Then wait 5–10 min and run the health check from `homelab-troubleshooting`.
   Lesson (2026-10-31): never re-run a block that contains `kubeseal` + `shred` — the second run seals
   nothing and overwrites the SealedSecret file with an empty one (fixed with `git revert`).
 - Restore a file: take it from the repo and copy it in: `kubectl cp configuration.yaml home-assistant/home-assistant-0:/config/configuration.yaml -c home-assistant`, then restart HA or reload YAML from the UI.
+- Restore Broadlink codes: copy `.storage/broadlink_remote_<mac>_codes` back into `/config/.storage/` **with HA stopped** (HA rewrites `.storage` on shutdown), then start HA.
 - This is history for YAML, **not** a full backup.
 
 ## Kernel rollback (one boot only, to test)

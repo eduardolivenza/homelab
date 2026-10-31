@@ -1,6 +1,7 @@
 #!/bin/sh
 # Mirrors a WHITELIST of Home Assistant config files from /config (read-only) to Git.
-# Never copied: secrets.yaml, .storage/ (tokens, credentials), databases, logs, recordings.
+# Never copied: secrets.yaml, .storage/ (tokens, credentials) except Broadlink learnt
+# codes, databases, logs, recordings.
 set -eu
 
 REPO="git@github.com:eduardolivenza/home-assistant.git"
@@ -43,7 +44,9 @@ fi
 # Safety net inside the repo too, in case someone adds files by hand
 cat > "$WORK/.gitignore" <<'IGN'
 secrets.yaml
-.storage/
+.storage/*
+!.storage/broadlink_remote_*_codes
+!.storage/broadlink_remote_*_flags
 *.db
 *.db-*
 *.log
@@ -64,6 +67,15 @@ for item in configuration.yaml automations.yaml scripts.yaml scenes.yaml \
   if [ -e "/config/$item" ]; then
     cp -a "/config/$item" "$WORK/$item"
   fi
+done
+
+# Broadlink IR/RF codes learnt with remote.learn_command live in .storage (which is
+# otherwise never copied: it holds tokens). Only these files are mirrored.
+rm -rf "${WORK:?}/.storage"
+for f in /config/.storage/broadlink_remote_*_codes /config/.storage/broadlink_remote_*_flags; do
+  [ -e "$f" ] || continue
+  mkdir -p "$WORK/.storage"
+  cp -a "$f" "$WORK/.storage/"
 done
 
 cd "$WORK"
