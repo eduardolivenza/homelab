@@ -51,7 +51,7 @@ Full story and settings in `fest-descans-postgres`. Signature:
 - Startup always waits exactly `checkpoint_timeout` between `redo done` and `checkpoint starting: end-of-recovery`.
 
 **Fix (applied):** `io_method = sync` in `postgresql.primary.extendedConfiguration` (fest-page `helm/api/values.yaml`), `checkpoint_timeout = 60s`. Then delete the pod.
-**Underlying suspicion:** latch wake-ups (signalfd + epoll) not delivered under kernel 7.0.0-42. Test by booting 7.0.0-38 and temporarily removing `io_method = sync` (procedure in `homelab-disaster-recovery`).
+**Underlying suspicion:** latch wake-ups (signalfd + epoll) not delivered under kernel 7.0.0-42. Same pattern seen with `rsync` in the `ha-config-backup` job (forked processes idle forever after finishing the copy, server idle). If a tool hangs with all processes in `S` and nothing to do, suspect this and avoid multi-process tools or test kernel 7.0.0-38. Test by booting 7.0.0-38 and temporarily removing `io_method = sync` (procedure in `homelab-disaster-recovery`).
 Note: `pg_isready` without `-U` returns `no attempt` (exit 3) in the Bitnami container — that is a client-side quirk, not a server problem.
 
 ## 5. PostgreSQL crash recovery after a bad shutdown

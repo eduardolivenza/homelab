@@ -9,8 +9,8 @@ WORK="/tmp/repo"
 
 log() { echo "$(date '+%H:%M:%S') $*"; }
 
-log "Installing git, openssh, rsync"
-apk add --no-cache git openssh-client rsync >/dev/null
+log "Installing git, openssh"
+apk add --no-cache git openssh-client >/dev/null
 
 # SSH: deploy key from the SealedSecret + GitHub's published ed25519 host key (no TOFU).
 # BatchMode: never wait for a prompt. ConnectTimeout: fail fast if port 22 is unreachable.
@@ -52,22 +52,19 @@ recordings/
 IGN
 
 log "Syncing whitelist from /config"
-# Whitelist sync. P = protect from --delete (repo-only files).
-rsync -a --checksum --delete \
-  --filter='P /.git' --filter='P /.gitignore' --filter='P /README.md' \
-  --include='/configuration.yaml' \
-  --include='/automations.yaml' \
-  --include='/scripts.yaml' \
-  --include='/scenes.yaml' \
-  --include='/customize.yaml' \
-  --include='/groups.yaml' \
-  --include='/.HA_VERSION' \
-  --include='/packages/***' \
-  --include='/themes/***' \
-  --include='/blueprints/***' \
-  --include='/custom_templates/***' \
-  --exclude='*' \
-  /config/ "$WORK/"
+# Whitelist sync with plain rm + cp in this single process. rsync (forked
+# sender/receiver) hung forever on this host after copying (2026-10-31), the same
+# "process never woken up" symptom as PostgreSQL's io workers.
+# Each item is removed from the repo and copied again if it still exists in HA,
+# so deletions inside HA are mirrored too. Nothing outside the list is touched.
+for item in configuration.yaml automations.yaml scripts.yaml scenes.yaml \
+            customize.yaml groups.yaml .HA_VERSION \
+            packages themes blueprints custom_templates; do
+  rm -rf "${WORK:?}/$item"
+  if [ -e "/config/$item" ]; then
+    cp -a "/config/$item" "$WORK/$item"
+  fi
+done
 
 cd "$WORK"
 log "Committing"

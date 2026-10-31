@@ -50,3 +50,4 @@
 ## 2026-10-31
 - Added `ha-config-backup` CronJob: nightly HA YAML mirror to private repo `eduardolivenza/home-assistant` (decision D18).
 - Fixed doc paths broken by the D16 rename (`argocd-components/` → `argocd-apps/`).
+- First runs of `ha-config-backup` hung: SSH/GitHub access was fine, but `rsync` (3 forked processes) copied everything and then waited forever (`hrtimer_nanosleep`/`poll`) with the server idle. Replaced by `rm` + `cp -a` in one process. Another case of processes never being woken up → strengthens the kernel 7.0.0-42 suspicion.
