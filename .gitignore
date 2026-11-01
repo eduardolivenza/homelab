@@ -4,3 +4,4 @@
 *.unsealed.yaml
 .env
 !renovate.json
+/.idea/*
