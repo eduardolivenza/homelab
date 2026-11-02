@@ -23,4 +23,4 @@ under `.claude/skills/`. Read the relevant skill before acting.
 - **Protect data first.** Back up (HA backup, `pg_dump`) before touching stateful apps.
 - Edu writes in Spanish or English; answer in the language he uses.
 
-Last full update of this documentation: 2026-10-30.
+Last full update of this documentation: 2026-10-30 (fest-descans PostgreSQL docs: 2026-11-02).

@@ -10,7 +10,7 @@ description: Backups, safe reboot, kernel rollback and full rebuild of the homel
 | Item | Where | How | Status (2026-10-30) |
 |---|---|---|---|
 | Sealed Secrets key | `kube-system` secrets labelled `sealedsecrets.bitnami.com/sealed-secrets-key` | `kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > ~/sealed-secrets-key.backup.yaml` → copy to password manager | Taken 2026-10-28 on server; off-server copy not confirmed |
-| fest-descans DB | PVC `data-fest-descans-api-postgresql-0` | `pg_dump` (see `fest-descans-postgres`) → copy to PC | Not confirmed |
+| fest-descans DB | PVC `data-fest-descans-api-db-0` | `pg_dump` (see `fest-descans-postgres`) → copy to PC | Manual dump 2026-11-02 on Edu's PC; no automated backup yet |
 | HA YAML config | PVC `home-assistant-home-assistant-0` | Automatic: nightly CronJob `ha-config-backup` → private repo `eduardolivenza/home-assistant` (see below) | Since 2026-10-31 |
 | HA full (`.storage`, history, integrations) | same PVC | HA UI → Settings → System → Backups → download / backup agent | No regular backups yet |
 | HA recordings | host `/home/edu/ha-recordings` (~500 MB) | optional | none |
@@ -21,13 +21,13 @@ Copy from the server to Edu's Windows PC (PowerShell):
 `scp edu@192.168.68.53:~/<file> C:\Users\EduardOlivenzaSole\Claude\Projects\LocalServer\`
 
 Raw volume copy (only while the app is stopped): PVCs live under `/var/lib/rancher/k3s/storage/pvc-<uid>_<ns>_<pvc>`:
-`sudo tar czf ~/pg-backup-$(date +%F).tar.gz -C /var/lib/rancher/k3s/storage $(sudo ls /var/lib/rancher/k3s/storage | grep data-fest-descans-api-postgresql-0)`
+`sudo tar czf ~/pg-backup-$(date +%F).tar.gz -C /var/lib/rancher/k3s/storage $(sudo ls /var/lib/rancher/k3s/storage | grep data-fest-descans-api-db-0)`
 
 ## Safe reboot
 
 PostgreSQL does not get a clean shutdown when the node reboots → 1–5 min crash recovery on start. Do:
 ```bash
-kubectl exec -n fest-descans fest-descans-api-postgresql-0 -- pg_ctl -D /bitnami/postgresql/data stop -m fast -t 120
+kubectl exec -n fest-descans fest-descans-api-db-0 -- pg_ctl stop -m fast -t 120
 sudo reboot
 ```
 Then wait 5–10 min and run the health check from `homelab-troubleshooting`.
@@ -37,7 +37,7 @@ Then wait 5–10 min and run the health check from `homelab-troubleshooting`.
 - CronJob `ha-config-backup` (ns `home-assistant`, 03:17 Europe/Madrid) mounts HA's PVC **read-only**, copies a **whitelist** and pushes to `git@github.com:eduardolivenza/home-assistant.git` (private) when something changed. Commit message: `HA config <date> (HA <version>)`.
 - Whitelist (in `components/ha-config-backup/backup.sh`): `configuration.yaml`, `automations.yaml`, `scripts.yaml`, `scenes.yaml`, `customize.yaml`, `groups.yaml`, `.HA_VERSION`, `packages/`, `themes/`, `blueprints/`, `custom_templates/`, and from `.storage/` **only** the Broadlink learnt codes (`broadlink_remote_*_codes`, `broadlink_remote_*_flags`). Never: `secrets.yaml`, the rest of `.storage/`, databases, logs, recordings, `custom_components/` (reinstall from HACS). A `.gitignore` in the repo repeats the exclusions.
 - Auth: deploy key with write access on that repo only, in SealedSecret `ha-config-backup-ssh` (`components/ha-config-backup/sealed-ssh-key.yaml`). GitHub's ed25519 host key is pinned in the script.
-- Image `alpine:3.22`, installs git/openssh each run (needs internet). Sync is `rm` + `cp -a` per whitelisted item (rsync hung on this host: same never-woken-up symptom as PostgreSQL).
+- Image `alpine:3.22`, installs git/openssh each run (needs internet). Sync is `rm` + `cp -a` per whitelisted item (rsync hung on this host: same never-woken-up symptom as PostgreSQL; root cause is very likely the AppArmor signal denial, see `fest-descans-postgres`).
 - Run now / debug:
   ```bash
   kubectl create job --from=cronjob/ha-config-backup ha-config-backup-manual -n home-assistant
@@ -54,7 +54,8 @@ Then wait 5–10 min and run the health check from `homelab-troubleshooting`.
 
 ## Kernel rollback (one boot only, to test)
 
-Kernel 7.0.0-42 (first booted 2026-10-28) is suspected for the PostgreSQL hang; 7.0.0-38 is installed.
+Kernel 7.0.0-42 (first booted 2026-10-28) was suspected for the PostgreSQL hang; 7.0.0-38 is installed.
+**Update 2026-11-02:** the hang is AppArmor denying signals inside containers (`fest-descans-postgres`). Booting 7.0.0-38 is now only useful to check whether that kernel applies the AppArmor restriction differently (`dmesg` signal denials, `sysctl kernel.apparmor_restrict_unprivileged_unconfined`).
 ```bash
 journalctl --list-boots --no-pager | tail -6
 for b in -3 -2 -1 0; do echo "boot $b: $(journalctl -b $b -k --no-pager 2>/dev/null | grep -m1 -o 'Linux version [^ ]*')"; done
@@ -64,7 +65,7 @@ sudo grub-reboot "Advanced options for Ubuntu>Ubuntu, with Linux 7.0.0-38-generi
 sudo reboot
 uname -r
 ```
-Test: does HA start fast? Remove `io_method = sync` temporarily — does PostgreSQL accept connections? If 38 is good, make it default (`sudo grub-set-default "<entry>"`) and `sudo apt-mark hold` the 42 kernel packages until a newer kernel is out; retest then. A normal reboot returns to the default kernel.
+Test: does HA start fast? Are there `operation="signal"` AppArmor denials in `dmesg`? If 38 is good, make it default (`sudo grub-set-default "<entry>"`) and `sudo apt-mark hold` the 42 kernel packages until a newer kernel is out; retest then. A normal reboot returns to the default kernel.
 
 ## Full rebuild from zero (new disk / new machine)
 

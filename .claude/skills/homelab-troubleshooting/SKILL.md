@@ -50,13 +50,15 @@ Full story and settings in `fest-descans-postgres`. Signature:
 - On the host, `sudo ps -eo pid,stat,wchan:32,etime,args | grep '[p]ostgres'` shows many backends in `authentication` state for minutes, all `S ep_poll`, plus sleeping `io worker` processes.
 - Startup always waits exactly `checkpoint_timeout` between `redo done` and `checkpoint starting: end-of-recovery`.
 
-**Fix (applied):** `io_method = sync` in `postgresql.primary.extendedConfiguration` (fest-page `helm/api/values.yaml`), `checkpoint_timeout = 60s`. Then delete the pod.
-**Underlying suspicion:** latch wake-ups (signalfd + epoll) not delivered under kernel 7.0.0-42. Same pattern seen with `rsync` in the `ha-config-backup` job (forked processes idle forever after finishing the copy, server idle). If a tool hangs with all processes in `S` and nothing to do, suspect this and avoid multi-process tools or test kernel 7.0.0-38. Test by booting 7.0.0-38 and temporarily removing `io_method = sync` (procedure in `homelab-disaster-recovery`).
-Note: `pg_isready` without `-U` returns `no attempt` (exit 3) in the Bitnami container — that is a client-side quirk, not a server problem.
+**Root cause (found 2026-11-02):** AppArmor denies signals between processes of the same container on this host
+(`kernel.apparmor_restrict_unprivileged_unconfined = 1` → stacked label `cri-containerd.apparmor.d//&unconfined`);
+PostgreSQL's wake-up signals (`SIGURG`, `SIGUSR1`) are lost. Check: `sudo dmesg -T | grep 'apparmor="DENIED"' | grep 'operation="signal"' | tail`.
+**Fix (applied):** `appArmorProfile: Unconfined` on the postgres container (fest-page `helm/api/templates/postgresql.yaml`). `io_method = sync` is still set but no longer the fix.
+**Other tools:** the same bug very likely made `rsync` hang in the `ha-config-backup` job. If any multi-process tool hangs with all processes in `S` and nothing to do, look for `operation="signal"` denials with its `comm=` in `dmesg`. Details: `fest-descans-postgres`.
 
 ## 5. PostgreSQL crash recovery after a bad shutdown
 
-Logs `database system was not properly shut down; automatic recovery in progress`, `the database system is starting up` repeated. Normal; `invalid record length ... got 0` is just the end of WAL. Give it time (startupProbe allows 30 min). Avoid unclean shutdowns: stop it first (`pg_ctl -D /bitnami/postgresql/data stop -m fast -t 120` inside the pod) before rebooting the server.
+Logs `database system was not properly shut down; automatic recovery in progress`, `the database system is starting up` repeated. Normal; `invalid record length ... got 0` is just the end of WAL. Give it time (startupProbe allows 30 min). Avoid unclean shutdowns: stop it first (`kubectl exec -n fest-descans fest-descans-api-db-0 -- pg_ctl stop -m fast -t 120`) before rebooting the server. Minutes of "in recovery mode" on a tiny DB = the AppArmor signal bug (section 4), not the disk.
 
 ## 6. Home Assistant not starting / restarting
 

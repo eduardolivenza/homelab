@@ -56,7 +56,7 @@ Each entry: decision → why → tradeoff / what we gave up → revisit when.
 ## D11. RAM diet
 - Removed Traefik, ArgoCD Dex and notifications. Kept metrics-server (needed for `kubectl top`). Candidate next: Docker on the host.
 
-## D12. fest-descans PostgreSQL: keep Bitnami for now, with workarounds
+## D12. fest-descans PostgreSQL: keep Bitnami for now, with workarounds (superseded by D18)
 - Image pinned by digest (PG 18.4) instead of `latest`; `io_method = sync`, `checkpoint_timeout = 60s`, `recovery_init_sync_method = syncfs`, startupProbe up to 30 min, `terminationGracePeriodSeconds: 120`.
 - **Why:** see `fest-descans-postgres`. Bitnami stopped publishing free versioned images (2025) and its chart (13.4.4, made for PG 16) is mismatched with the PG 18 image → planned migration to official `postgres:18`.
 
@@ -89,3 +89,9 @@ Each entry: decision → why → tradeoff / what we gave up → revisit when.
 
 ## D14. Host config versioned but applied by hand
 - `host/k3s/config.yaml` mirrors `/etc/rancher/k3s/config.yaml` (currently only `disable: [traefik]`). Copy + `sudo systemctl restart k3s` to apply. Ansible planned.
+
+## D18. fest-descans PostgreSQL on the official image; AppArmor unconfined for it (2026-11-02)
+- Replaced the Bitnami subchart with a small StatefulSet on `postgres:18.x` (tag + digest) in fest-page `helm/api/templates/postgresql.yaml`. Service name kept (`fest-descans-api-postgresql`) so `DATABASE_URL` didn't change; new StatefulSet/PVC names because selector and volumeClaimTemplates are immutable. Data moved with `pg_dump`/restore.
+- App user `fest-descans` owns the DB but is not superuser; `postgres` is the superuser.
+- `appArmorProfile: Unconfined` on the postgres container: the host's AppArmor restriction denies signals between processes of the same container (root cause of the 2026-10 outage). **Tradeoff:** less confinement for that one container; it keeps non-root, no capabilities, seccomp. Revisit when the host is fixed.
+- **Why not Bitnami chart 18.x (Renovate):** five chart majors of template changes for no version gain, and Bitnami stopped free versioned images in 2025.
