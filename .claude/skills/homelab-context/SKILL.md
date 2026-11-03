@@ -71,7 +71,7 @@ fest-page charts are inert leftovers.
 | `argocd` | ArgoCD v3.5.x (server, repo-server, application-controller, applicationset-controller, redis). Dex and notifications removed. | `argocd-apps/argocd.yaml` → `components/argocd` (kustomize over upstream install.yaml) |
 | `kube-system` | K3s core (coredns, local-path-provisioner, metrics-server) + sealed-secrets-controller | K3s / `argocd-apps/sealed-secrets.yaml` |
 | `cloudflared` | Tunnel connector | `components/cloudflared` (local Helm chart) |
-| `fest-descans` | web, admin, api (+ migrate initContainer), PostgreSQL (Bitnami subchart of the api chart) | parent app `fest-descans` (`argocd-apps/fest-descans.yaml`) → ApplicationSet `components/fest-descans/` → apps `fest-descans-{web,admin,api}` from fest-page `helm/<app>`; its SealedSecrets are in fest-page `helm/api/templates/` |
+| `fest-descans` | web, admin, api (+ migrate initContainer), PostgreSQL (official `postgres:18` StatefulSet `fest-descans-api-db` in the api chart) | parent app `fest-descans` (`argocd-apps/fest-descans.yaml`) → ApplicationSet `components/fest-descans/` → apps `fest-descans-{web,admin,api}` from fest-page `helm/<app>`; its SealedSecrets are in fest-page `helm/api/templates/` |
 | `home-assistant` | Home Assistant StatefulSet (pajikos chart), hostNetwork, PVC 5Gi + hostPath `/home/edu/ha-recordings` | `argocd-apps/home-assistant.yaml` + `components/home-assistant/values.yaml` |
 | `home-assistant` (same ns) | CronJob `ha-config-backup`: nightly mirror of HA YAML config to the **private** repo `eduardolivenza/home-assistant` | `argocd-apps/ha-config-backup.yaml` + `components/ha-config-backup/` |
 
@@ -88,12 +88,12 @@ Broadlink RM4 Pro.
 - Data: HA PVC, PostgreSQL PVC, `/home/edu/ha-recordings`.
 - Renovate is the Mend-hosted GitHub app (installed on all repos, mode **Interactive**).
 
-## Open items / roadmap (as of 2026-10-30)
+## Open items / roadmap (as of 2026-11-02)
 
 Highest value first:
-1. Confirm a `pg_dump` of fest-descans exists off the server (see `fest-descans-postgres`).
-2. Migrate PostgreSQL from Bitnami image to official `postgres:18` (plan in `fest-descans-postgres`).
-3. Test kernel 7.0.0-38 vs 7.0.0-42 (suspected cause of PG/HA hangs; see `homelab-troubleshooting`).
+1. Automated nightly `pg_dump` of fest-descans to a location off the server (only manual dumps so far; last 2026-11-02).
+2. Fix the AppArmor signal denial on the host (root cause of the PG hangs, likely also rsync), then remove `appArmorProfile: Unconfined` from fest-page; check which other containers are hit (`fest-descans-postgres`).
+3. fest-descans DB cleanup: delete old Bitnami PVC `data-fest-descans-api-postgresql-0` after 2026-11-05; remove `io_method: sync` after 2026-11-09.
 4. Hardware: SSD (+ RAM).
 5. fest-page infra review fixes: probe `timeoutSeconds` (default 1 s) on web/admin/api, DB backup CronJob, Node 20 → 22/24, web SSR calls the public API URL instead of in-cluster, remove dead Ingresses, migrate initContainer retries forever, outdated secret comments in values.yaml.
 6. HA full backups off the laptop (the Git mirror only covers YAML; `.storage` and history need HA backups, e.g. to Google Drive/OneDrive); recordings retention CronJob (days to keep not decided).

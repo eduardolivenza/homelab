@@ -19,7 +19,7 @@ description: Sealed Secrets on the homelab — which secrets exist, how to read,
 | Secret | Namespace | SealedSecret file | Key | What it is for / what breaks without it |
 |---|---|---|---|---|
 | `fest-descans-api` | fest-descans | **fest-page** `helm/api/templates/sealed-secret.yaml` | `JWT_SECRET` | Signs the website admin's login tokens. Changing it logs every admin session out. |
-| | | | `password` | Password of PostgreSQL user `fest-descans`. Used by the api (`DATABASE_URL`) and its `migrate` initContainer; also Bitnami `existingSecret`. |
+| | | | `password` | Password of PostgreSQL user `fest-descans`. Used by the api (`DATABASE_URL`) and its `migrate` initContainer, and by the postgres init script that creates the user. |
 | | | | `postgres-password` | Password of the PostgreSQL superuser `postgres` (`pg_dump`, `psql`, maintenance). |
 | `ghcr-credentials` | fest-descans | **fest-page** `helm/api/templates/sealed-ghcr-credentials.yaml` | `.dockerconfigjson` | GitHub PAT (`read:packages`) to pull the private web/admin/api images from ghcr.io. When it expires new pods fail with `ImagePullBackOff`. |
 | `ha-config-backup-ssh` | home-assistant | `components/ha-config-backup/sealed-ssh-key.yaml` | `id_ed25519` | Deploy key (write, only repo `eduardolivenza/home-assistant`) used by the nightly HA config mirror. If missing, the CronJob pod stays in `ContainerCreating`. |
@@ -66,7 +66,7 @@ git add <path> && git commit -m "Rotate <name>" && git push
 - Path: for fest-descans secrets, `~/repositories/fest-page/helm/api/templates/<file>.yaml` (commit in fest-page, `git pull --rebase` first). For platform secrets, the component's chart `templates/` in this repo.
 - SealedSecrets inside a Helm chart go under `templates/`. Base64 contains no `{{`, so Helm passes them through (check: `grep -c '{{' file` → 0, and `helm template` renders it).
 - Moving a SealedSecret file between repos/charts needs no re-sealing (it is bound to name + namespace, not to a path). Safe move: stop managing it in the old app first (Application without finalizer, or remove the file with prune off), then add it to the new app; check `metadata.annotations["argocd.argoproj.io/tracking-id"]`.
-- **Database passwords**: changing `password` / `postgres-password` in the secret does NOT change them inside PostgreSQL (Bitnami only reads them at first init). Run `ALTER USER ... PASSWORD` in PostgreSQL in the same maintenance window.
+- **Database passwords**: changing `password` / `postgres-password` in the secret does NOT change them inside PostgreSQL (the postgres image and its init script only read them at first init). Run `ALTER USER ... PASSWORD` in PostgreSQL in the same maintenance window.
 
 ## Seal a secret that already exists in the cluster (migration recipe)
 
