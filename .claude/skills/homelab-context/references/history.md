@@ -51,8 +51,9 @@
 - Added `ha-config-backup` CronJob: nightly HA YAML mirror to private repo `eduardolivenza/home-assistant` (decision D18).
 - Fixed doc paths broken by the D16 rename (`argocd-components/` → `argocd-apps/`).
 - First runs of `ha-config-backup` hung: SSH/GitHub access was fine, but `rsync` (3 forked processes) copied everything and then waited forever (`hrtimer_nanosleep`/`poll`) with the server idle. Replaced by `rm` + `cp -a` in one process. Another case of processes never being woken up → strengthens the kernel 7.0.0-42 suspicion.
+- 2026-11-01: first scheduled `ha-config-backup` run failed at 03:17: `apk add` could not reach dl-cdn.alpinelinux.org ("temporary error"), so git/openssh were "no such package". Switched to the pinned `alpine/git` image (no runtime installs) and added retries around the GitHub access check.
 
 ## 2026-11-02 — fest-descans PostgreSQL: official image, root cause of the hangs
-- fest-page: Bitnami subchart (13.4.4) replaced by the official `postgres:18.6` image (decision D18). Migration: `pg_dump --clean --if-exists` → merge → ArgoCD pruned Bitnami and started an empty DB → restore → row counts matched (`1|0|1|1`). Old PVC kept for rollback.
+- fest-page: Bitnami subchart (13.4.4) replaced by the official `postgres:18.6` image (decision D19). Migration: `pg_dump --clean --if-exists` → merge → ArgoCD pruned Bitnami and started an empty DB → restore → row counts matched (`1|0|1|1`). Old PVC kept for rollback.
 - The new pod restarted twice ("in recovery mode" for minutes, liveness kills) and the node went NotReady for a while. `dmesg` showed `apparmor="DENIED" operation="signal" comm="postgres" signal=urg/usr1 peer="cri-containerd.apparmor.d//&unconfined"`: with `kernel.apparmor_restrict_unprivileged_unconfined = 1` container processes run under a stacked label and the runtime profile denies signals between them. **This is the root cause of the 2026-10-29/30 outage** (not io workers, not the disk). Fix: `appArmorProfile: Unconfined` for the postgres container → 0 denials, recovery in ~1 s.
 - fest-page also: Tailwind 4, dotenv 18, jsdom 30, `revisionHistoryLimit: 3` on all Deployments.

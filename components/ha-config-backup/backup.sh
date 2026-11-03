@@ -10,8 +10,7 @@ WORK="/tmp/repo"
 
 log() { echo "$(date '+%H:%M:%S') $*"; }
 
-log "Installing git, openssh"
-apk add --no-cache git openssh-client >/dev/null
+# git and ssh come with the image (alpine/git); nothing is installed at runtime.
 
 # SSH: deploy key from the SealedSecret + GitHub's published ed25519 host key (no TOFU).
 # BatchMode: never wait for a prompt. ConnectTimeout: fail fast if port 22 is unreachable.
@@ -24,13 +23,21 @@ git config --global user.name  "ha-config-backup"
 git config --global user.email "ha-config-backup@asusold"
 git config --global init.defaultBranch "$BRANCH"
 
+# Retry: a short network/DNS blip at night must not cost the backup.
+# 4 attempts x (<=60s + 45s wait) stays under the Job's activeDeadlineSeconds (600).
 log "Checking access to $REPO"
-if ! REFS=$(timeout 60 git ls-remote "$REPO" 2>&1); then
-  log "ERROR: cannot reach or authenticate to $REPO:"
-  echo "$REFS"
-  log "Check: deploy key added to the repo with 'Allow write access'; outbound SSH (port 22) to github.com."
-  exit 1
-fi
+attempt=1
+until REFS=$(timeout 60 git ls-remote "$REPO" 2>&1); do
+  if [ "$attempt" -ge 4 ]; then
+    log "ERROR: cannot reach or authenticate to $REPO after $attempt attempts:"
+    echo "$REFS"
+    log "Check: deploy key added to the repo with 'Allow write access'; outbound SSH (port 22) to github.com; DNS."
+    exit 1
+  fi
+  log "Attempt $attempt failed, retrying in 45s: $(echo "$REFS" | tail -1)"
+  attempt=$((attempt + 1))
+  sleep 45
+done
 
 if echo "$REFS" | grep -q "refs/heads/$BRANCH"; then
   log "Cloning"
