@@ -5,7 +5,7 @@ image:
   repository: ghcr.io/home-assistant/home-assistant
   # Pinned on purpose (never "stable"). Renovate opens one PR per monthly release.
   # HA cannot be downgraded: back up before each upgrade (homelab-upgrades skill).
-  tag: 2026.11.0
+  tag: 2026.11.1
 env:
   - name: TZ
     value: "Europe/Madrid"
