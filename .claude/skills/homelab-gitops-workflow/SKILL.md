@@ -49,7 +49,7 @@ kubectl get applications -n argocd         # expect Synced / Healthy
 - Render locally before pushing when touching kustomize/Helm: `kubectl kustomize components/argocd`, `helm template x components/cloudflared -n cloudflared`.
 - For changes in fest-page (`~/repositories/fest-page`) use `git pull --rebase` first: its CI pushes image-tag commits to `main` all the time.
 - Commit messages: imperative, say what and why (`home-assistant: add startupProbe for slow disk`).
-- Claude cannot push. Hand Edu a single, reviewable block per step and tell him the expected output.
+- Claude can commit and push from Edu's PC clone when he asks (a push to `main` = a deploy). Server-side steps (refresh, verify) still go to Edu as a single, reviewable block per step with the expected output.
 
 ## Verify
 

@@ -18,7 +18,8 @@ under `.claude/skills/`. Read the relevant skill before acting.
 
 - **Git is the source of truth.** Never fix things with `kubectl edit/patch/scale` on resources ArgoCD manages: `selfHeal` reverts them. Change the repo, push, refresh.
 - **The server is weak:** 3.2 GB RAM, 5400 rpm HDD. Every new component costs RAM, and slow disk I/O is the root cause of most incidents. Probes must be generous.
-- **Claude has no direct access to the server or to GitHub push.** Edu runs commands over SSH on the server (`edu@192.168.68.53`) and pastes the output. Give him copy-pasteable command blocks, one step at a time, with what the expected output looks like.
+- **Claude has no direct access to the server.** Edu runs commands over SSH on the server (`edu@192.168.68.53`) and pastes the output. Give him copy-pasteable command blocks, one step at a time, with what the expected output looks like.
+- **Claude can commit and push** this repo from Edu's PC clone (WSL, SSH to GitHub works) when Edu asks. ArgoCD deploys `main` directly, so a push is a deploy: after pushing, give Edu the refresh/verify commands for the server.
 - **Pin every image/chart version.** `latest`/`stable` caused two incidents. Renovate proposes upgrades.
 - **Protect data first.** Back up (HA backup, `pg_dump`) before touching stateful apps.
 - Edu writes in Spanish or English; answer in the language he uses.

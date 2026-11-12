@@ -11,8 +11,8 @@ Chronology of what was done and why: `references/history.md`.
 ## Owner and way of working
 
 - Owner: Edu (Eudald), Sant Cugat (Barcelona). DevOps background. Writes Spanish/English.
-- Claude has **no direct access** to the server nor push rights on GitHub. Edu runs commands on the
-  server via SSH and pastes output. The server pushes to GitHub with an SSH key added to Edu's
+- Claude has **no direct access** to the server: Edu runs commands on the server via SSH and pastes
+  output. Claude **can commit and push** the homelab repo from Edu's PC clone (WSL) when asked. The server pushes to GitHub with an SSH key added to Edu's
   GitHub account (SSH host alias `github-homelab` in `~/.ssh/config`, used for both repos).
 - Local clones on the server: `~/repositories/homelab`, `~/repositories/fest-page`.
 
