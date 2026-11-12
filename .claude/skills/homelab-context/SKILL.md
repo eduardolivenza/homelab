@@ -75,7 +75,8 @@ fest-page charts are inert leftovers.
 | `home-assistant` | Home Assistant StatefulSet (pajikos chart), hostNetwork, PVC 5Gi + hostPath `/home/edu/ha-recordings` | `argocd-apps/home-assistant.yaml` + `components/home-assistant/values.yaml` |
 | `home-assistant` (same ns) | CronJob `ha-config-backup`: nightly mirror of HA YAML config to the **private** repo `eduardolivenza/home-assistant` | `argocd-apps/ha-config-backup.yaml` + `components/ha-config-backup/` |
 
-Home Assistant integrations in use (for upgrade risk): HACS, localtuya, tuya_local (xZetsubou fork,
+Home Assistant integrations in use (for upgrade risk): custom integrations from the built-in Marketplace
+(HACS until 2026.11, when HA absorbed it) — edata (Datadis electricity), localtuya, tuya_local (xZetsubou fork,
 thermostat), imou_life (camera, ONVIF/RTSP, person-detection recordings), hisense / hisense_ac_plugin,
 Broadlink RM4 Pro.
 

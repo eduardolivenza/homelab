@@ -33,7 +33,7 @@ description: How upgrades work on the homelab — Renovate PRs, merge order, and
 ## Home Assistant
 
 - HA **cannot be downgraded** (DB/storage migrations). Before every upgrade: HA UI → Settings → System → Backups → create + **download** off the laptop.
-- Update HACS custom integrations first (localtuya, tuya_local, imou_life, hisense) — old custom integrations are the usual breakage.
+- Update custom integrations first from Settings → **Marketplace** (built into HA since 2026.11; replaced HACS). Current list with versions: `custom_components.txt` in the private mirror repo (edata, hisense, hisense_ac_plugin, imou_life, localtuya, tuya_local). Old custom integrations are the usual breakage.
 - One monthly release at a time (2026.11.x, then 2026.12.x…), take the latest patch of each month. Read https://www.home-assistant.io/blog/ breaking changes.
 - After merge:
   ```bash
