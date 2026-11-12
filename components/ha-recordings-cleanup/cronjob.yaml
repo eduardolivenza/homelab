@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ha-recordings-cleanup
+spec:
+  schedule: "5 4 * * *"           # every night 04:05 (after ha-config-backup at 03:17)
+  timeZone: Europe/Madrid
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 600
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: cleanup
+              image: docker.io/library/busybox:1.37.0
+              # Keep 14 days. Only *.mp4 files are deleted; one process, no forks (see the
+              # rsync hang in ha-config-backup). Prints what it deletes and what is left.
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  echo "Deleting recordings older than 14 days:"
+                  find /recordings -type f -name '*.mp4' -mtime +14 -print -delete
+                  echo "Remaining: $(find /recordings -type f -name '*.mp4' | wc -l) files, $(du -sh /recordings | cut -f1)"
+              resources:
+                requests: { cpu: 10m, memory: 16Mi }
+                limits:   { cpu: 200m, memory: 64Mi }
+              volumeMounts:
+                - { name: recordings, mountPath: /recordings }
+          volumes:
+            - name: recordings
+              hostPath:
+                path: /home/edu/ha-recordings
+                type: Directory

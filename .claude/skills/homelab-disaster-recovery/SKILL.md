@@ -13,7 +13,7 @@ description: Backups, safe reboot, kernel rollback and full rebuild of the homel
 | fest-descans DB | PVC `data-fest-descans-api-db-0` | `pg_dump` (see `fest-descans-postgres`) → copy to PC | Manual dump 2026-11-02 on Edu's PC; no automated backup yet |
 | HA YAML config | PVC `home-assistant-home-assistant-0` | Automatic: nightly CronJob `ha-config-backup` → private repo `eduardolivenza/home-assistant` (see below) | Since 2026-10-31 |
 | HA full (`.storage`, history, integrations) | same PVC | HA UI → Settings → System → Backups → download / backup agent | No regular backups yet |
-| HA recordings | host `/home/edu/ha-recordings` (~500 MB) | optional | none |
+| HA recordings | host `/home/edu/ha-recordings` (~500 MB) | not backed up; CronJob `ha-recordings-cleanup` (04:05) deletes `*.mp4` older than 14 days | Retention since 2026-11-12 |
 | Cloudflare tunnel creds | sealed in Git | covered by the key backup | — |
 | Server's GitHub SSH key | `~/.ssh` | regenerate if lost, add to GitHub account | — |
 
@@ -35,7 +35,7 @@ Then wait 5–10 min and run the health check from `homelab-troubleshooting`.
 ## Home Assistant config mirror (HA → Git)
 
 - CronJob `ha-config-backup` (ns `home-assistant`, 03:17 Europe/Madrid) mounts HA's PVC **read-only**, copies a **whitelist** and pushes to `git@github.com:eduardolivenza/home-assistant.git` (private) when something changed. Commit message: `HA config <date> (HA <version>)`.
-- Whitelist (in `components/ha-config-backup/backup.sh`): `configuration.yaml`, `automations.yaml`, `scripts.yaml`, `scenes.yaml`, `customize.yaml`, `groups.yaml`, `.HA_VERSION`, `packages/`, `themes/`, `blueprints/`, `custom_templates/`, and from `.storage/` **only** the Broadlink learnt codes (`broadlink_remote_*_codes`, `broadlink_remote_*_flags`). Never: `secrets.yaml`, the rest of `.storage/`, databases, logs, recordings, `custom_components/` (reinstall from HACS). A `.gitignore` in the repo repeats the exclusions.
+- Whitelist (in `components/ha-config-backup/backup.sh`): `configuration.yaml`, `automations.yaml`, `scripts.yaml`, `scenes.yaml`, `customize.yaml`, `groups.yaml`, `.HA_VERSION`, `packages/`, `themes/`, `blueprints/`, `custom_templates/`, and from `.storage/` **only** token-free files: Broadlink learnt codes (`broadlink_remote_*_codes`, `broadlink_remote_*_flags`), dashboards (`lovelace`, `lovelace.*`, `lovelace_dashboards`, `lovelace_resources`) and UI helpers (`input_*`, `counter`, `timer`, `schedule`) — added 2026-11-12. It also writes `custom_components.txt` (name + version of each custom integration and HACS card) so a rebuild knows what to reinstall. Never: `secrets.yaml`, the rest of `.storage/`, databases, logs, recordings, the `custom_components/` code (reinstall from HACS). A `.gitignore` in the repo repeats the exclusions.
 - Auth: deploy key with write access on that repo only, in SealedSecret `ha-config-backup-ssh` (`components/ha-config-backup/sealed-ssh-key.yaml`). GitHub's ed25519 host key is pinned in the script.
 - Image `alpine/git` (pinned), git/ssh preinstalled: no `apk add` at runtime (the first scheduled run, 2026-11-01, failed because the Alpine mirror was unreachable at night). GitHub access is retried 4 times, 45 s apart. Sync is `rm` + `cp -a` per whitelisted item (rsync hung on this host: same never-woken-up symptom as PostgreSQL; root cause is very likely the AppArmor signal denial, see `fest-descans-postgres`).
 - Run now / debug:
@@ -49,7 +49,7 @@ Then wait 5–10 min and run the health check from `homelab-troubleshooting`.
   Lesson (2026-10-31): never re-run a block that contains `kubeseal` + `shred` — the second run seals
   nothing and overwrites the SealedSecret file with an empty one (fixed with `git revert`).
 - Restore a file: take it from the repo and copy it in: `kubectl cp configuration.yaml home-assistant/home-assistant-0:/config/configuration.yaml -c home-assistant`, then restart HA or reload YAML from the UI.
-- Restore Broadlink codes: copy `.storage/broadlink_remote_<mac>_codes` back into `/config/.storage/` **with HA stopped** (HA rewrites `.storage` on shutdown), then start HA.
+- Restore Broadlink codes, dashboards or helpers: copy the `.storage/<file>` back into `/config/.storage/` **with HA stopped** (HA rewrites `.storage` on shutdown), then start HA.
 - This is history for YAML, **not** a full backup.
 
 ## Kernel rollback (one boot only, to test)

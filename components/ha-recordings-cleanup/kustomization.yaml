@@ -1,0 +1,7 @@
+# Retention for HA's camera recordings: the "Gravar quan detecta moviment" automation writes
+# 30 s mp4 files into /config/recordings = host dir /home/edu/ha-recordings, with no cleanup.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: home-assistant
+resources:
+  - cronjob.yaml

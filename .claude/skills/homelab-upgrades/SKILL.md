@@ -42,8 +42,9 @@ description: How upgrades work on the homelab — Renovate PRs, merge order, and
   kubectl logs -n home-assistant home-assistant-0 -c home-assistant --tail=200 | grep -E 'ERROR|Setup failed'
   ```
   Check http://192.168.68.53:8123, https://homeassistant.festdescans.com and devices (thermostat, camera, Broadlink).
-- If external access returns **400 Bad Request**: HA no longer trusts the proxy. Since 2026.8 the `http:` YAML (`use_x_forwarded_for`, `trusted_proxies`) moved to `.storage/http` (YAML support removed in 2027.2). Fix the trusted proxies there/in the UI. Rollback = restore the backup (not `git revert` alone).
-- Current: HA 2026.10.4, chart 0.3.89. The chart has an `httpYamlSupported` helper that only matters when the chart's ingress is enabled (it isn't).
+- If external access returns **400 Bad Request**: HA no longer trusts the proxy. Since 2026.8 the http settings live in `.storage/http` (the `http:` YAML block was removed from `configuration.yaml` on 2026-11-12, so the 2027.2 removal is not a blocker). Current values: `use_x_forwarded_for: true`, `trusted_proxies: ["10.42.0.0/16"]` (K3s pod network = cloudflared pods), `ip_ban_enabled: true`, `login_attempts_threshold: 5`. Edit with `kubectl exec ... python3` (json load/modify/dump) after a copy to `/config/http.bak-<date>`, then delete the pod. Rollback = restore the backup (not `git revert` alone).
+- Banned yourself? Remove the IP from `/config/ip_bans.yaml` and restart HA. If the ban log shows `10.42.0.x` instead of the visitor's public IP, HA is banning cloudflared (everyone loses remote access): check `trusted_proxies`.
+- Current: HA 2026.11.1, chart 0.3.91. The chart has an `httpYamlSupported` helper that only matters when the chart's ingress is enabled (it isn't).
 
 ## cloudflared
 

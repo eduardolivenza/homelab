@@ -1,0 +1,21 @@
+# Nightly deletion of old camera motion recordings (host dir /home/edu/ha-recordings).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ha-recordings-cleanup
+  namespace: argocd
+  labels:
+    homelab/tier: app
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/eduardolivenza/homelab
+    targetRevision: HEAD
+    path: components/ha-recordings-cleanup
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: home-assistant
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
