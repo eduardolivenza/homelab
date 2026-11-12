@@ -23,7 +23,7 @@ Chronology of what was done and why: `references/history.md`.
 | Host | `asusold`, old laptop, Ubuntu Server 26.04 |
 | CPU | 8 cores |
 | RAM | **3.2 GB** + 5.4 GB swap (+ zram). Typical use ~2.2 GB, ~1 GB available. |
-| Disk | **Seagate ST9640320AS, 5400 rpm HDD**, 596 GB, LVM root, ~33 % used |
+| Disk | **Seagate ST9640320AS, 5400 rpm HDD**, 596 GB, LVM root LV only **98 GB, 68 % used** (2026-11-12; VG probably has free space to grow it, check `sudo vgs`) |
 | Kernel | 7.0.0-42-generic (first booted 2026-10-28). 7.0.0-38 still installed. |
 | Time zone | `Europe/Madrid` on the host (since 2026-10-30); containers and Kubernetes log in UTC |
 | Network | Wi-Fi/Ethernet on TP-Link Deco mesh, LAN `192.168.68.0/24`, server **192.168.68.53** (DHCP reservation) |
@@ -97,7 +97,8 @@ Highest value first:
 3. fest-descans DB cleanup: delete old Bitnami PVC `data-fest-descans-api-postgresql-0` after 2026-11-05; remove `io_method: sync` after 2026-11-09.
 4. Hardware: SSD (+ RAM).
 5. fest-page infra review fixes: probe `timeoutSeconds` (default 1 s) on web/admin/api, DB backup CronJob, Node 20 → 22/24, web SSR calls the public API URL instead of in-cluster, remove dead Ingresses, migrate initContainer retries forever, outdated secret comments in values.yaml.
-6. HA full backups off the laptop (the Git mirror only covers YAML; `.storage` and history need HA backups, e.g. to Google Drive/OneDrive); recordings retention CronJob (days to keep not decided).
+6. ~~HA full backups off the laptop; recordings retention~~ done 2026-11-12 (Google Drive daily backups; `ha-recordings-cleanup` 14 days). Pending: rotate the HA backup encryption key (it was pasted into a Claude chat) and delete old manual backups in `/config/backups` (~590 MB).
+6b. Root LV is 98 GB of the 596 GB disk and 68 % full: check `sudo vgs; sudo lvs` and grow it online (`lvextend -r`) if the VG has free space.
 7. Check disk health with `smartctl` (never done).
 8. Disable Docker on the host if unused (frees RAM).
 9. Cloudflare as code (OpenTofu) + Cloudflare Access in front of HA; host/K3s as code (Ansible).

@@ -7,12 +7,12 @@ description: Backups, safe reboot, kernel rollback and full rebuild of the homel
 
 ## What must be backed up (Git does not have it)
 
-| Item | Where | How | Status (2026-10-30) |
+| Item | Where | How | Status (2026-11-12) |
 |---|---|---|---|
 | Sealed Secrets key | `kube-system` secrets labelled `sealedsecrets.bitnami.com/sealed-secrets-key` | `kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > ~/sealed-secrets-key.backup.yaml` → copy to password manager | Taken 2026-10-28 on server; off-server copy not confirmed |
 | fest-descans DB | PVC `data-fest-descans-api-db-0` | `pg_dump` (see `fest-descans-postgres`) → copy to PC | Manual dump 2026-11-02 on Edu's PC; no automated backup yet |
 | HA YAML config | PVC `home-assistant-home-assistant-0` | Automatic: nightly CronJob `ha-config-backup` → private repo `eduardolivenza/home-assistant` (see below) | Since 2026-10-31 |
-| HA full (`.storage`, history, integrations) | same PVC | HA UI → Settings → System → Backups → download / backup agent | No regular backups yet |
+| HA full (`.storage`, history, integrations) | same PVC | HA automatic backups: daily 04:30, settings + history (no media), to **Google Drive** (folder `Home Assistant` in My Drive root, official integration with Edu's own OAuth client in Google Cloud project `home-assistant`, app published "In production") + local `/config/backups`, keep 7. Encrypted: key in Edu's password manager + printed emergency kit (never in Git) | Since 2026-11-12 |
 | HA recordings | host `/home/edu/ha-recordings` (~500 MB) | not backed up; CronJob `ha-recordings-cleanup` (04:05) deletes `*.mp4` older than 14 days | Retention since 2026-11-12 |
 | Cloudflare tunnel creds | sealed in Git | covered by the key backup | — |
 | Server's GitHub SSH key | `~/.ssh` | regenerate if lost, add to GitHub account | — |
@@ -92,7 +92,7 @@ Test: does HA start fast? Are there `operation="signal"` AppArmor denials in `dm
    ```
    No key backup? → follow "If the key is lost" in `homelab-secrets` and re-seal before step 5.
 5. **Root app:** `kubectl apply -f bootstrap/root-app.yaml`; watch `kubectl get applications -n argocd`.
-6. **Data:** fest-descans starts with an empty DB → restore the `pg_dump` (`fest-descans-postgres`). HA starts fresh → restore the HA backup from its onboarding screen ("Restore from backup").
+6. **Data:** fest-descans starts with an empty DB → restore the `pg_dump` (`fest-descans-postgres`). HA starts fresh → restore the HA backup from its onboarding screen ("Restore from backup"): download the newest `.tar` from Google Drive (`Home Assistant` folder) to the PC, upload it there, and enter the encryption key from the password manager.
 7. **Tools:** kubeseal, yq, k9s; SSH key for GitHub (`~/.ssh/config` alias `github-homelab`), clone fest-page into `~/repositories`.
 8. **Cloudflare:** tunnel and DNS records already exist in the account; nothing to do unless a new tunnel was created.
 9. Check every hostname and the ArgoCD UI (https://<ip>:30443, password from `argocd-initial-admin-secret`, then change it and delete that secret).

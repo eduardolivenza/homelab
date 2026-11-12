@@ -64,3 +64,5 @@
 - Pending: TOTP for all HA users; Cloudflare Access still on the roadmap.
 - Section 4 of the HA review: `ha-config-backup` now also mirrors dashboards/helpers and `custom_components.txt` (first run OK, no secrets in the new files). New CronJob `ha-recordings-cleanup` (14 days); its first manual run deleted **all** existing recordings because they were all older than 14 days (expected, Edu confirmed they were not needed). Lesson: before adding a retention job, list what the first run will delete (`find ... -mtime +N` without `-delete`).
 - HA 2026.11 absorbed HACS as the built-in **Marketplace** (Settings → Marketplace); there is no `hacs` custom integration any more.
+- HA full backups set up: Google Drive integration (own OAuth client; `my.home-assistant.io` redirect sent the browser to a stale `localhost` URL saved in that browser → fixed on my.home-assistant.io). Daily 04:30, settings + history (DB only 19.6 MB), Drive + local, keep 7, encrypted. Test backup landed in Drive.
+- Found: root LV is 98 GB (68 % used) on a 596 GB disk; docs said ~33 % of the disk.
