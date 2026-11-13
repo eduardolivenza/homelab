@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ha-voice-stt-data
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ha-voice-stt
+  labels: { app: ha-voice-stt }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }   # RWO volume
+  selector:
+    matchLabels: { app: ha-voice-stt }
+  template:
+    metadata:
+      labels: { app: ha-voice-stt }
+    spec:
+      containers:
+        - name: speech-to-phrase
+          # Pinned (Renovate proposes upgrades). Entrypoint passes --uri tcp://0.0.0.0:10300,
+          # --models-dir /models, --train-dir /train and --tools-dir.
+          image: docker.io/rhasspy/wyoming-speech-to-phrase:1.4.3
+          args:
+            - --hass-websocket-uri
+            - ws://home-assistant.home-assistant.svc.cluster.local:8123/api/websocket
+            - --hass-token
+            - $(HASS_TOKEN)
+            - --retrain-on-start
+          env:
+            - name: HASS_TOKEN
+              valueFrom:
+                secretKeyRef: { name: ha-voice-hass-token, key: token }
+          ports:
+            - { name: wyoming, containerPort: 10300 }
+          volumeMounts:
+            - { name: data, mountPath: /models, subPath: models }
+            - { name: data, mountPath: /train,  subPath: train }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            # Training (Kaldi) peaks above steady state; adjust after watching `kubectl top`.
+            limits:   { cpu: "2", memory: 768Mi }
+          # First start downloads models (HuggingFace) and trains: very generous startup.
+          startupProbe:
+            tcpSocket: { port: wyoming }
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 90
+          livenessProbe:
+            tcpSocket: { port: wyoming }
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ha-voice-stt-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ha-voice-stt
+spec:
+  selector: { app: ha-voice-stt }
+  ports:
+    - { name: wyoming, port: 10300, targetPort: wyoming }

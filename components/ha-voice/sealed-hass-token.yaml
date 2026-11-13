@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: ha-voice-hass-token
+  namespace: home-assistant
+spec:
+  encryptedData:
+    token: AgAZfZtCQUuBxBlAPlDh5canIrdMdgiWyfVWrILWr19XyCvZF+cTVRoEWF5jJrkYIIh/hCq9KeqhTPDFHQrlrf1aZ7Z0BZe1meQKlCbcoDu3Yxy0fGYn9Q1+976adet9bSxrxG8Jr9IGZpy5qtm+GV40HoeLFs7/JdS6UJZLqoQSHQ9gKTdsRdqnjYBoxA4Qn+rTeLKysnJNDy2i8x7w7ahzIQoy9O0yNWbtdH2SKchE+9VQmCEyC23oxOLILWW42W9FpCH2BX+75scuizBGyD0JgHggOOfWiATEwBq8SLHmrhUwEX5/QodbzNK9zgaigCjck+cFnoEQwcDmIxIGI0qo2Mm8YTpq5mJmyfltT+B4m8ZZY4TYxlxu1wN7KsXsZSzuKbOWaZ6IA0nIyg80940/kgJDcrdPDEQ00ngDFPtMyPko5lBQBz7SvCnD9NBVXpV6lYSuTVYFAJPpXuUYBjl2XLCRWvP7fc+HCdW6HtaW7wLtR2cYKviRL63ByrdjuO7ClSBX6R94Oa+BVJjgQ1Sh1Cfy5Y1Aw2/P4uhi6Z8iJIhq6eZmSXZ7IGKhRomibyEOVlvcVP8IcmN1lAa1hO2Sp0IRuhKzgDKca5hczl/zIJvXVx7Jjm840u9JZnOHZ7lh8tK1euI3dDe7Pnh9T9kSSMGxTxS1Pix5aL7F1r9rTy1o3huT86dFlDAIbIqgTxIxYQEaPZjqhdKQz93227cxjzN5Oo/6JHnZjPiZxptzbD0AIucgTs4tCO2hZ0WViM+KA2quYQ9yRrH//b2iRHka3ps9KjU/WhD0YdlxhILtMI57GY30wkaB+qkCUMkLIC5v5jcnxNfeZxGO1X9x5qIozTK8PBAcpJPjTYFmz85Qb+392wh0b8D/rqX80m+Ck6FsL4axCnfQy6dNST1xFDUUB/i0A0cNIXL9AjH91mQwhNXF8be3e+c=
+  template:
+    metadata:
+      name: ha-voice-hass-token
+      namespace: home-assistant

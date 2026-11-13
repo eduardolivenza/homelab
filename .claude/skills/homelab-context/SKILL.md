@@ -74,6 +74,7 @@ fest-page charts are inert leftovers.
 | `fest-descans` | web, admin, api (+ migrate initContainer), PostgreSQL (official `postgres:18` StatefulSet `fest-descans-api-db` in the api chart) | parent app `fest-descans` (`argocd-apps/fest-descans.yaml`) → ApplicationSet `components/fest-descans/` → apps `fest-descans-{web,admin,api}` from fest-page `helm/<app>`; its SealedSecrets are in fest-page `helm/api/templates/` |
 | `home-assistant` | Home Assistant StatefulSet (pajikos chart), hostNetwork, PVC 5Gi + hostPath `/home/edu/ha-recordings` | `argocd-apps/home-assistant.yaml` + `components/home-assistant/values.yaml` |
 | `home-assistant` (same ns) | CronJob `ha-config-backup`: nightly mirror of HA YAML config to the **private** repo `eduardolivenza/home-assistant` | `argocd-apps/ha-config-backup.yaml` + `components/ha-config-backup/` |
+| `home-assistant` (same ns) | Local voice for Assist (since 2026-11-13): `ha-voice-tts` (Piper, Wyoming tcp 10200) and `ha-voice-stt` (Speech-to-Phrase, Wyoming tcp 10300; HA-commands-only STT, Whisper is too heavy for 3.2 GB). Languages es (+ca/en via pipelines). Siri on iPhone uses the Companion app's Assist shortcut, no server STT | `argocd-apps/ha-voice.yaml` + `components/ha-voice/` |
 
 Home Assistant integrations in use (for upgrade risk): custom integrations from the built-in Marketplace
 (HACS until 2026.11, when HA absorbed it) — edata (Datadis electricity), localtuya, tuya_local (xZetsubou fork,

@@ -1,0 +1,22 @@
+# Local voice for Home Assistant Assist: Piper (text-to-speech) + Speech-to-Phrase (speech-to-text).
+# Wyoming servers that HA reaches via the Wyoming integration. See components/ha-voice/kustomization.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ha-voice
+  namespace: argocd
+  labels:
+    homelab/tier: app
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/eduardolivenza/homelab
+    targetRevision: HEAD
+    path: components/ha-voice
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: home-assistant
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

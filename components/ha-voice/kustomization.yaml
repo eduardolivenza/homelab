@@ -1,0 +1,17 @@
+# Local, free voice control for Home Assistant (Assist), sized for a 3.2 GB RAM box.
+#  - Piper (TTS): wyoming-piper, tcp 10200. Voices are downloaded on demand into its PVC.
+#  - Speech-to-Phrase (STT): tcp 10300. Instead of Whisper (too heavy for this server) it trains a
+#    small Kaldi model from HA's own entities/areas, so it only understands HA commands
+#    ("enciende la luz del salón"), not free-form speech. It trains one model per language used by HA's
+#    system language + every Assist pipeline (es mandatory, ca/en optional). Retrains on start; after
+#    adding/renaming entities restart it: kubectl rollout restart deploy/ha-voice-stt -n home-assistant
+# HA connects to both through the Wyoming integration (HA is hostNetwork + ClusterFirstWithHostNet,
+# so it resolves the Service names). Siri on iPhone needs none of this: Siri transcribes on the phone
+# and sends text to Assist through the Companion app.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: home-assistant
+resources:
+  - piper.yaml
+  - speech-to-phrase.yaml
+  - sealed-hass-token.yaml     # SealedSecret ha-voice-hass-token (HA long-lived access token for Speech-to-Phrase)
