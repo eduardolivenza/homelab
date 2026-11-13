@@ -5,7 +5,7 @@ description: Big-picture context of Edu's homelab (K3s server asusold) — hardw
 
 # Homelab context
 
-State as of 2026-10-30. Decisions with full rationale: `references/decisions.md`.
+State as of 2026-10-30 (partial updates up to 2026-11-13). Decisions with full rationale: `references/decisions.md`.
 Chronology of what was done and why: `references/history.md`.
 
 ## Owner and way of working
@@ -42,7 +42,7 @@ stalls (node flaps `NotReady`) and liveness probes kill slow pods. Recommended h
 |---|---|---|
 | `github.com/eduardolivenza/homelab` (this) | public | Everything deployed on the cluster: ArgoCD apps (`argocd-apps/`), component configs (`components/`), platform sealed secrets (cloudflared), K3s host config, Renovate config |
 | `github.com/eduardolivenza/home-assistant` | **private** | Nightly mirror of HA's YAML config (written by the `ha-config-backup` CronJob; never edit by hand expecting HA to pick it up) |
-| `github.com/eduardolivenza/fest-page` | public | The fest-descans website monorepo (Next.js web + admin, Fastify API, Prisma), its Dockerfiles, GitHub Actions CI, Helm charts `helm/{web,admin,api}` with this environment's values and its own SealedSecrets |
+| `github.com/eduardolivenza/fest-page` | public | The fest-descans website monorepo (Next.js web + admin on Node 26; **API in Java 25 / Spring Boot** since 2026-11-11 — it was Node/Fastify/Prisma before — with Flyway migrations run by the app on startup), its Dockerfiles, GitHub Actions CI, Helm charts `helm/{web,admin,api}` with this environment's values and its own SealedSecrets |
 
 fest-page CI builds images to `ghcr.io/eduardolivenza/festpage/{web,admin,api}` and commits the new
 tag into `helm/<app>/values.yaml` (`ci: update ... [skip ci]`). ArgoCD here deploys those charts.
@@ -71,7 +71,7 @@ fest-page charts are inert leftovers.
 | `argocd` | ArgoCD v3.5.x (server, repo-server, application-controller, applicationset-controller, redis). Dex and notifications removed. | `argocd-apps/argocd.yaml` → `components/argocd` (kustomize over upstream install.yaml) |
 | `kube-system` | K3s core (coredns, local-path-provisioner, metrics-server) + sealed-secrets-controller | K3s / `argocd-apps/sealed-secrets.yaml` |
 | `cloudflared` | Tunnel connector | `components/cloudflared` (local Helm chart) |
-| `fest-descans` | web, admin, api (+ migrate initContainer), PostgreSQL (official `postgres:18` StatefulSet `fest-descans-api-db` in the api chart) | parent app `fest-descans` (`argocd-apps/fest-descans.yaml`) → ApplicationSet `components/fest-descans/` → apps `fest-descans-{web,admin,api}` from fest-page `helm/<app>`; its SealedSecrets are in fest-page `helm/api/templates/` |
+| `fest-descans` | web, admin, api (Java/Spring Boot, 512Mi limit, ~270 MB RSS: the largest app after HA), PostgreSQL (official `postgres:18` StatefulSet `fest-descans-api-db` in the api chart) | parent app `fest-descans` (`argocd-apps/fest-descans.yaml`) → ApplicationSet `components/fest-descans/` → apps `fest-descans-{web,admin,api}` from fest-page `helm/<app>`; its SealedSecrets are in fest-page `helm/api/templates/` |
 | `home-assistant` | Home Assistant StatefulSet (pajikos chart), hostNetwork, PVC 5Gi + hostPath `/home/edu/ha-recordings` | `argocd-apps/home-assistant.yaml` + `components/home-assistant/values.yaml` |
 | `home-assistant` (same ns) | CronJob `ha-config-backup`: nightly mirror of HA YAML config to the **private** repo `eduardolivenza/home-assistant` | `argocd-apps/ha-config-backup.yaml` + `components/ha-config-backup/` |
 | `home-assistant` (same ns) | Local voice for Assist (since 2026-11-13): `ha-voice-tts` (Piper, Wyoming tcp 10200) and `ha-voice-stt` (Speech-to-Phrase, Wyoming tcp 10300; HA-commands-only STT, Whisper is too heavy for 3.2 GB). Languages es (+ca/en via pipelines). Siri on iPhone uses the Companion app's Assist shortcut, no server STT | `argocd-apps/ha-voice.yaml` + `components/ha-voice/` |
@@ -97,10 +97,11 @@ Highest value first:
 2. Fix the AppArmor signal denial on the host (root cause of the PG hangs, likely also rsync), then remove `appArmorProfile: Unconfined` from fest-page; check which other containers are hit (`fest-descans-postgres`).
 3. fest-descans DB cleanup: delete old Bitnami PVC `data-fest-descans-api-postgresql-0` after 2026-11-05; remove `io_method: sync` after 2026-11-09.
 4. Hardware: SSD (+ RAM).
-5. fest-page infra review fixes: probe `timeoutSeconds` (default 1 s) on web/admin/api, DB backup CronJob, Node 20 → 22/24, web SSR calls the public API URL instead of in-cluster, remove dead Ingresses, migrate initContainer retries forever, outdated secret comments in values.yaml.
+5. fest-page infra review fixes still open (2026-11-13): probe `timeoutSeconds` on web/admin (the Java api already has generous probes), DB backup CronJob, web SSR calls the public API URL instead of in-cluster, outdated secret comments in values.yaml. Done: Node upgrade (26), dead Ingresses removed, migrate initContainer gone (Java rewrite).
 6. ~~HA full backups off the laptop; recordings retention~~ done 2026-11-12 (Google Drive daily backups; `ha-recordings-cleanup` 14 days). Pending: rotate the HA backup encryption key (it was pasted into a Claude chat) and delete old manual backups in `/config/backups` (~590 MB).
 6b. Root LV is 98 GB of the 596 GB disk and 68 % full: check `sudo vgs; sudo lvs` and grow it online (`lvextend -r`) if the VG has free space.
 7. Check disk health with `smartctl` (never done).
-8. Disable Docker on the host if unused (frees RAM).
+8. Disable Docker on the host: confirmed unused (no containers) on 2026-11-13: `sudo systemctl disable --now docker.socket docker containerd`.
+8b. RAM pressure (2026-11-13): after adding `ha-voice` (~270 MB) the box swapped (`available` 635 MB, `wa` 30–57 %, sealed-secrets-controller CreateContainerError). If still swapping after Docker is off: Speech-to-Phrase Spanish-only, or remove `ha-voice`. Check max RAM the laptop takes (`sudo dmidecode -t memory`); review voice usage around 2026-11-20.
 9. Cloudflare as code (OpenTofu) + Cloudflare Access in front of HA; host/K3s as code (Ansible).
 10. Change the fest admin password if the seed default (`admin123!`, public in fest-page) is still valid.

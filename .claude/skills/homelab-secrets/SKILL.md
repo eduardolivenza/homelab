@@ -19,7 +19,7 @@ description: Sealed Secrets on the homelab — which secrets exist, how to read,
 | Secret | Namespace | SealedSecret file | Key | What it is for / what breaks without it |
 |---|---|---|---|---|
 | `fest-descans-api` | fest-descans | **fest-page** `helm/api/templates/sealed-secret.yaml` | `JWT_SECRET` | Signs the website admin's login tokens. Changing it logs every admin session out. |
-| | | | `password` | Password of PostgreSQL user `fest-descans`. Used by the api (`DATABASE_URL`) and its `migrate` initContainer, and by the postgres init script that creates the user. |
+| | | | `password` | Password of PostgreSQL user `fest-descans`. Used by the api (`SPRING_DATASOURCE_PASSWORD`; Flyway migrations run inside the app) and by the postgres init script that creates the user. |
 | | | | `postgres-password` | Password of the PostgreSQL superuser `postgres` (`pg_dump`, `psql`, maintenance). |
 | `ghcr-credentials` | fest-descans | **fest-page** `helm/api/templates/sealed-ghcr-credentials.yaml` | `.dockerconfigjson` | GitHub PAT (`read:packages`) to pull the private web/admin/api images from ghcr.io. When it expires new pods fail with `ImagePullBackOff`. |
 | `ha-config-backup-ssh` | home-assistant | `components/ha-config-backup/sealed-ssh-key.yaml` | `id_ed25519` | Deploy key (write, only repo `eduardolivenza/home-assistant`) used by the nightly HA config mirror. If missing, the CronJob pod stays in `ContainerCreating`. |

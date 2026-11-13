@@ -15,14 +15,14 @@ Official `postgres` image since 2026-11-02 (before: Bitnami subchart, see Histor
 | Item | Value |
 |---|---|
 | StatefulSet / pod | `fest-descans-api-db` / `fest-descans-api-db-0`, ns `fest-descans` |
-| Service | `fest-descans-api-postgresql:5432` (old name kept so the api `DATABASE_URL` didn't change) |
+| Service | `fest-descans-api-postgresql:5432` (old name kept so the api's datasource URL didn't change; now `SPRING_DATASOURCE_URL`) |
 | PVC | `data-fest-descans-api-db-0`, 5Gi, local-path (host dir under `/var/lib/rancher/k3s/storage/`) |
 | Image | `docker.io/library/postgres:18.6@sha256:3a4264…` (tag + digest in values; Renovate proposes updates) |
 | Data dir | PVC mounted at `/var/lib/postgresql`, PGDATA `/var/lib/postgresql/18/docker`; runs as UID 999 |
 | Database | `fest-descans` |
 | Users | `postgres` = superuser (secret key `postgres-password`). `fest-descans` = app user, **owner of the database, not superuser** (secret key `password`), created by the init script on first start only |
 | Secret | `fest-descans-api` — SealedSecret in fest-page `helm/api/templates/sealed-secret.yaml` |
-| Schema | Prisma, migrations in fest-page `packages/db/prisma/migrations`, applied by the api's `migrate` initContainer (`prisma migrate deploy`, retries every 5 s forever) |
+| Schema | Flyway (since the Java rewrite, 2026-11-11): migrations in fest-page `apps/api/src/main/resources/db/migration` (`V1__init.sql`, …), applied by the api itself on startup; history table `flyway_schema_history`. Before that it was Prisma (`_prisma_migrations`, may still exist in the DB) |
 | Local dev / CI | fest-page `docker-compose.yml` uses `postgres:18-alpine`; the `Image (api)` PR check runs the production image + init script |
 | Old Bitnami PVC | `data-fest-descans-api-postgresql-0`: kept for rollback after the migration, **delete it after 2026-11-05** (see Cleanup) |
 
@@ -95,7 +95,7 @@ Row counts on 2026-11-02 (after the migration): `1|0|1|1`.
 ```bash
 # Backup (DB must answer pg_isready)
 kubectl exec -n fest-descans fest-descans-api-db-0 -- pg_dump --clean --if-exists -U postgres -d fest-descans > ~/fest-descans-$(date +%F).sql
-ls -lh ~/fest-descans-*.sql; grep -c '^COPY' ~/fest-descans-*.sql   # 9 = 8 tables + _prisma_migrations
+ls -lh ~/fest-descans-*.sql; grep -c '^COPY' ~/fest-descans-*.sql   # one per table (app tables + flyway_schema_history; compare with \dt)
 grep -c 'PostgreSQL database dump complete' ~/fest-descans-$(date +%F).sql   # 1
 # then copy off the server (PowerShell on Edu's PC):
 #   scp edu@192.168.68.53:~/fest-descans-*.sql C:\Users\EduardOlivenzaSole\Claude\Projects\LocalServer\
