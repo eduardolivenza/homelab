@@ -74,7 +74,6 @@ fest-page charts are inert leftovers.
 | `fest-descans` | web, admin, api (Java/Spring Boot, 512Mi limit, ~270 MB RSS: the largest app after HA), PostgreSQL (official `postgres:18` StatefulSet `fest-descans-api-db` in the api chart) | parent app `fest-descans` (`argocd-apps/fest-descans.yaml`) → ApplicationSet `components/fest-descans/` → apps `fest-descans-{web,admin,api}` from fest-page `helm/<app>`; its SealedSecrets are in fest-page `helm/api/templates/` |
 | `home-assistant` | Home Assistant StatefulSet (pajikos chart), hostNetwork, PVC 5Gi + hostPath `/home/edu/ha-recordings` | `argocd-apps/home-assistant.yaml` + `components/home-assistant/values.yaml` |
 | `home-assistant` (same ns) | CronJob `ha-config-backup`: nightly mirror of HA YAML config to the **private** repo `eduardolivenza/home-assistant` | `argocd-apps/ha-config-backup.yaml` + `components/ha-config-backup/` |
-| `home-assistant` (same ns) | Local voice for Assist (since 2026-11-13): `ha-voice-tts` (Piper, Wyoming tcp 10200) and `ha-voice-stt` (Speech-to-Phrase, Wyoming tcp 10300; HA-commands-only STT, Whisper is too heavy for 3.2 GB). Languages es (+ca/en via pipelines). Siri on iPhone uses the Companion app's Assist shortcut, no server STT | `argocd-apps/ha-voice.yaml` + `components/ha-voice/` |
 
 Home Assistant integrations in use (for upgrade risk): custom integrations from the built-in Marketplace
 (HACS until 2026.11, when HA absorbed it) — edata (Datadis electricity), localtuya, tuya_local (xZetsubou fork,
@@ -102,6 +101,6 @@ Highest value first:
 6b. Root LV is 98 GB of the 596 GB disk and 68 % full: check `sudo vgs; sudo lvs` and grow it online (`lvextend -r`) if the VG has free space.
 7. Check disk health with `smartctl` (never done).
 8. Disable Docker on the host: confirmed unused (no containers) on 2026-11-13: `sudo systemctl disable --now docker.socket docker containerd`.
-8b. RAM pressure (2026-11-13): after adding `ha-voice` (~270 MB) the box swapped (`available` 635 MB, `wa` 30–57 %, sealed-secrets-controller CreateContainerError). If still swapping after Docker is off: Speech-to-Phrase Spanish-only, or remove `ha-voice`. Check max RAM the laptop takes (`sudo dmidecode -t memory`); review voice usage around 2026-11-20.
+8b. Local voice for HA (`ha-voice`: Piper TTS + Speech-to-Phrase STT as Wyoming pods, ~270 MB) was added and **removed the same day (2026-11-13)**: the box thrashed (`wa` 57–75 %, 10+ processes in D state, even with Docker off). Voice now = Siri on iPhone (Companion app Assist shortcut; Siri does the STT, no server cost). To bring it back after a RAM upgrade: `git revert` the removal commit (manifests in commit b516415) and seal a NEW HA long-lived token (the old one was revoked). Check max RAM the laptop takes (`sudo dmidecode -t memory`).
 9. Cloudflare as code (OpenTofu) + Cloudflare Access in front of HA; host/K3s as code (Ansible).
 10. Change the fest admin password if the seed default (`admin123!`, public in fest-page) is still valid.
