@@ -27,7 +27,8 @@ ps -eo rss,comm --sort=-rss | head -12
 kubectl top pods -A --sort-by=memory | head -12
 sudo dmesg -T | grep -iE 'oom|killed process|I/O error|hung task' | tail
 ```
-**Fix:** free RAM (already removed Traefik, ArgoCD Dex/notifications; next candidate: `sudo systemctl disable --now docker containerd` if Docker is unused), reboot to clear swap, make probes tolerant. Real fix: SSD (+RAM). Load average high with idle CPU = I/O wait, not CPU.
+**Fix:** free RAM (already removed Traefik, ArgoCD Dex/notifications, host Docker). Check the host tuning is in place: `sysctl vm.swappiness` → 150 (else idle memory isn't pushed to zram and program code gets re-read from the HDD: `iotop -oPba` shows *every* process reading a few MB), `journalctl --disk-usage` ≤ 200M. Make probes tolerant.
+Note: the first line of `vmstat` is the average since boot; judge by the following lines. Real fix: SSD (+RAM). Load average high with idle CPU = I/O wait, not CPU.
 
 ## 2. Pod killed with exit 137 / "failed liveness probe" / "failed startup probe"
 

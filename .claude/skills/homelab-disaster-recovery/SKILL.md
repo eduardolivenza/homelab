@@ -74,6 +74,9 @@ Test: does HA start fast? Are there `operation="signal"` AppArmor denials in `dm
    ```bash
    git clone https://github.com/eduardolivenza/homelab.git ~/repositories/homelab && cd ~/repositories/homelab
    sudo mkdir -p /etc/rancher/k3s && sudo cp host/k3s/config.yaml /etc/rancher/k3s/config.yaml
+   # memory/IO tuning (needs zram set up, e.g. zram-tools; see host/sysctl/99-zram.conf)
+   sudo mkdir -p /etc/systemd/journald.conf.d && sudo cp host/journald/size.conf /etc/systemd/journald.conf.d/
+   sudo cp host/sysctl/99-zram.conf /etc/sysctl.d/ && sudo sysctl --system
    curl -sfL https://get.k3s.io | sh -
    mkdir -p ~/.kube && sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config && sudo chown $USER: ~/.kube/config
    kubectl get nodes

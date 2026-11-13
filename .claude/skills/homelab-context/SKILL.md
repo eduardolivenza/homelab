@@ -22,7 +22,7 @@ Chronology of what was done and why: `references/history.md`.
 |---|---|
 | Host | `asusold`, old laptop, Ubuntu Server 26.04 |
 | CPU | 8 cores |
-| RAM | **3.2 GB** + 5.4 GB swap (+ zram). Typical use ~2.2 GB, ~1 GB available. |
+| RAM | **3.2 GB** usable (2 × 2 GB DDR3 SO-DIMM, both slots full; board reports max 16 GB, 8 GB is the safe upgrade) + zram 1.6 GB (prio 5, used first) + `/swap.img` 3.7 GB. Typical use ~2.5 GB. Tuning since 2026-11-13: `vm.swappiness=150`, `vm.page-cluster=0`, journald capped at 200 MB (files in `host/`). |
 | Disk | **Seagate ST9640320AS, 5400 rpm HDD**, 596 GB, LVM root LV only **98 GB, 68 % used** (2026-11-12; VG probably has free space to grow it, check `sudo vgs`) |
 | Kernel | 7.0.0-42-generic (first booted 2026-10-28). 7.0.0-38 still installed. |
 | Time zone | `Europe/Madrid` on the host (since 2026-10-30); containers and Kubernetes log in UTC |
@@ -83,6 +83,7 @@ Broadlink RM4 Pro.
 ## Things that live OUTSIDE Git (know them)
 
 - K3s itself and `/etc/rancher/k3s/config.yaml` (a copy is versioned in `host/k3s/config.yaml`, applied by hand).
+- Host tuning: `/etc/sysctl.d/99-zram.conf` and `/etc/systemd/journald.conf.d/size.conf` (copies in `host/sysctl/`, `host/journald/`, applied by hand). Docker/containerd system services disabled (2026-11-13).
 - The bootstrap `kubectl apply` of ArgoCD and `bootstrap/root-app.yaml`.
 - The Sealed Secrets private key (backup in `~/sealed-secrets-key.backup.yaml` on the server; should also be in a password manager).
 - Cloudflare: DNS records, the tunnel itself, (future) Access policies. Configured in the dashboard / via `cloudflared tunnel route dns`.
@@ -100,7 +101,7 @@ Highest value first:
 6. ~~HA full backups off the laptop; recordings retention~~ done 2026-11-12 (Google Drive daily backups; `ha-recordings-cleanup` 14 days). Pending: rotate the HA backup encryption key (it was pasted into a Claude chat) and delete old manual backups in `/config/backups` (~590 MB).
 6b. Root LV is 98 GB of the 596 GB disk and 68 % full: check `sudo vgs; sudo lvs` and grow it online (`lvextend -r`) if the VG has free space.
 7. Check disk health with `smartctl` (never done).
-8. Disable Docker on the host: confirmed unused (no containers) on 2026-11-13: `sudo systemctl disable --now docker.socket docker containerd`.
-8b. Local voice for HA (`ha-voice`: Piper TTS + Speech-to-Phrase STT as Wyoming pods, ~270 MB) was added and **removed the same day (2026-11-13)**: the box thrashed (`wa` 57–75 %, 10+ processes in D state, even with Docker off). Voice now = Siri on iPhone (Companion app Assist shortcut; Siri does the STT, no server cost). To bring it back after a RAM upgrade: `git revert` the removal commit (manifests in commit b516415) and seal a NEW HA long-lived token (the old one was revoked). Check max RAM the laptop takes (`sudo dmidecode -t memory`).
+8. ~~Disable Docker on the host~~ done 2026-11-13 (no containers; `docker.socket docker containerd` disabled). Could also be uninstalled.
+8b. Local voice for HA (`ha-voice`: Piper TTS + Speech-to-Phrase STT as Wyoming pods, ~270 MB) was added and **removed the same day (2026-11-13)**: the box thrashed (`wa` 57–75 %, 10+ processes in D state, even with Docker off). Voice now = Siri on iPhone (Companion app Assist shortcut; Siri does the STT, no server cost). To bring it back after a RAM upgrade: `git revert` the removal commit (manifests in commit b516415) and seal a NEW HA long-lived token (the old one was revoked). The same day the real cause of the chronic I/O wait (60–95 % since boot) was found: page-cache thrashing (programs' code evicted and re-read from the HDD) plus a 1.9 GB journal. Fixed with the zram sysctls + journald cap → `wa` 1–4 %. Next: RAM upgrade to 2 × 4 GB DDR3 SO-DIMM.
 9. Cloudflare as code (OpenTofu) + Cloudflare Access in front of HA; host/K3s as code (Ansible).
 10. Change the fest admin password if the seed default (`admin123!`, public in fest-page) is still valid.
